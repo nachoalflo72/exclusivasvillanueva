@@ -132,7 +132,7 @@ router.post('/', async (req, res) => {
 
 // Actualiza descuento, IVA y líneas de un pedido
 router.put('/:id', async (req, res) => {
-  const client = await db.connect();
+  const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
     const { descuento_pct, porcentaje_iva, lineas } = req.body;
