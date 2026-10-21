@@ -43,9 +43,18 @@ export default function Referencias() {
     if (!form.codigo || !form.nombre || !form.bodega_entidad_id)
       return toast('Código, nombre y bodega son obligatorios', 'error');
     setSaving(true);
+    const payload = {
+      ...form,
+      precio_compra:      parseFloat(form.precio_compra)      || 0,
+      precio_venta:       parseFloat(form.precio_venta)       || 0,
+      botellas_por_caja:  parseInt(form.botellas_por_caja)    || 6,
+      comision:           parseFloat(form.comision)           || 0,
+      promo_cajas_compra: parseInt(form.promo_cajas_compra)   || null,
+      promo_cajas_regalo: parseInt(form.promo_cajas_regalo)   || null,
+    };
     try {
-      if (form.id) await api.put(`/referencias/${form.id}`, form);
-      else         await api.post('/referencias', form);
+      if (form.id) await api.put(`/referencias/${form.id}`, payload);
+      else         await api.post('/referencias', payload);
       toast(form.id ? 'Actualizada' : 'Creada', 'success');
       cerrar(); cargar();
     } catch (e) { toast(e.message, 'error'); }
