@@ -375,35 +375,25 @@ export default function Pedidos() {
                     );
                   })}
                 </tbody>
-                <tfoot>
-                  {descPct > 0 && (
-                    <tr style={{ borderTop: '1px solid var(--border)' }}>
-                      <td colSpan={6} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted)', fontSize: 12 }}>Descuento {descPct}%</td>
-                      <td colSpan={3} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--danger, #e53)' }}>
-                        − {(parseFloat(pedidoSel.base_imponible) * descPct / 100).toFixed(2)} €
-                      </td>
-                    </tr>
-                  )}
-                  <tr style={{ borderTop: '1px solid var(--border)' }}>
-                    <td colSpan={6} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted)', fontSize: 12 }}>Base imponible</td>
-                    <td colSpan={3} style={{ padding: '6px 10px', textAlign: 'right' }}><Money value={pedidoSel.base_imponible} /></td>
-                  </tr>
-                  <tr>
-                    <td colSpan={6} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted)', fontSize: 12 }}>IVA {pedidoSel.porcentaje_iva}%</td>
-                    <td colSpan={3} style={{ padding: '6px 10px', textAlign: 'right' }}><Money value={pedidoSel.iva} /></td>
-                  </tr>
-                  <tr style={{ borderTop: '2px solid var(--border)', fontWeight: 700 }}>
-                    <td colSpan={6} style={{ padding: '8px 10px', textAlign: 'right', fontSize: 14 }}>Total</td>
-                    <td colSpan={3} style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--accent)', fontSize: 14 }}>
-                      <Money value={pedidoSel.total} />
-                    </td>
-                  </tr>
-                  <tr style={{ borderTop: '1px solid var(--border)' }}>
-                    <td colSpan={6} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--accent)', fontSize: 12 }}>Total comisiones</td>
-                    <td colSpan={3} style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--accent)', fontWeight: 600 }}>{totalCom.toFixed(2)} €</td>
-                  </tr>
-                </tfoot>
+                <tfoot></tfoot>
               </table>
+            </div>
+
+            {/* Barra de totales igual que en nuevo pedido */}
+            <div style={{ display: 'flex', gap: 0, background: 'var(--surface-raised)', borderRadius: 8, overflow: 'hidden', fontSize: 13, border: '1px solid var(--border)', marginTop: 12 }}>
+              {[
+                { label: 'Base', value: parseFloat(pedidoSel.base_imponible).toFixed(2) + ' €' },
+                { label: `Dto ${descPct}%`, value: '−' + (parseFloat(pedidoSel.base_imponible) * descPct / 100).toFixed(2) + ' €', color: '#e53' },
+                { label: 'Base s/dto', value: (parseFloat(pedidoSel.base_imponible) * (1 - descPct/100)).toFixed(2) + ' €' },
+                { label: `IVA ${pedidoSel.porcentaje_iva}%`, value: parseFloat(pedidoSel.iva).toFixed(2) + ' €' },
+                { label: 'TOTAL', value: parseFloat(pedidoSel.total).toFixed(2) + ' €', bold: true, accent: true },
+                { label: 'Comisiones', value: totalCom.toFixed(2) + ' €', accent: true },
+              ].map((t, i) => (
+                <div key={i} style={{ padding: '8px 14px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none', textAlign: 'right', flex: 1 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{t.label}</div>
+                  <div style={{ fontWeight: t.bold ? 700 : 500, color: t.accent ? 'var(--accent)' : t.color || 'inherit', whiteSpace: 'nowrap' }}>{t.value}</div>
+                </div>
+              ))}
             </div>
 
             {/* Botones dentro del scroll */}
