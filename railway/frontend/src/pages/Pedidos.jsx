@@ -191,13 +191,7 @@ export default function Pedidos() {
       {/* ── Modal Nuevo Pedido ─────────────────────────────── */}
       {modal === 'nuevo' && (
         <Modal title="Nuevo pedido" onClose={() => setModal(false)}
-          style={{ maxWidth: 1100, width: '95vw' }}
-          footer={<>
-            <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={guardar} disabled={saving}>
-              {saving ? 'Guardando…' : 'Crear pedido'}
-            </button>
-          </>}>
+          style={{ maxWidth: 1100, width: '95vw' }}>
 
           {/* Cabecera del pedido */}
           <div className="form-grid form-grid-2" style={{ gap: 12, marginBottom: 20 }}>
@@ -315,12 +309,10 @@ export default function Pedidos() {
                 <span style={{ color: 'var(--text-muted)' }}>Base imponible</span>
                 <span style={{ fontWeight: 500 }}>{totales.baseTotal.toFixed(2)} €</span>
               </div>
-              {(parseFloat(form.descuento_pct) > 0) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: 'var(--danger, #e53)' }}>
-                  <span>Descuento {form.descuento_pct}%</span>
-                  <span>− {totales.descEuros.toFixed(2)} €</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#e53' }}>
+                <span>Descuento {form.descuento_pct || 0}%</span>
+                <span>− {totales.descEuros.toFixed(2)} €</span>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Base s/descuento</span>
                 <span style={{ fontWeight: 500 }}>{totales.baseDesc.toFixed(2)} €</span>
@@ -338,6 +330,14 @@ export default function Pedidos() {
                 <span style={{ fontWeight: 600 }}>{totales.comision.toFixed(2)} €</span>
               </div>
             </div>
+          </div>
+
+          {/* Botones al final, dentro del scroll */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+            <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={guardar} disabled={saving}>
+              {saving ? 'Guardando…' : 'Crear pedido'}
+            </button>
           </div>
         </Modal>
       )}
