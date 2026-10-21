@@ -41,11 +41,12 @@ router.get('/kpis', async (req, res) => {
       );
       result.bodega_importe = parseFloat(r2[0].total_importe);
 
-      // 3. Comisiones de esa bodega
+      // 3. Comisiones de esa bodega (suma real de líneas)
       const f3 = buildFechaWhere(1);
       const { rows: r3 } = await db.query(
-        `SELECT COALESCE(SUM(p.total_comisiones), 0) AS total
-         FROM pedidos p
+        `SELECT COALESCE(SUM(lp.importe_comision), 0) AS total
+         FROM lineas_pedido lp
+         JOIN pedidos p ON p.id = lp.pedido_id
          WHERE p.bodega_entidad_id = $1 ${f3.where}`,
         [bodega_id, ...f3.params]
       );
