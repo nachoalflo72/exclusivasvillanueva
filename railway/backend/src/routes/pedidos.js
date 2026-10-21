@@ -157,8 +157,9 @@ router.put('/:id', async (req, res) => {
     );
     if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'No encontrado' }); }
 
-    // Reemplazar líneas
+    // Reemplazar líneas y calcular total comisiones
     await client.query(`DELETE FROM lineas_pedido WHERE pedido_id=$1`, [req.params.id]);
+    let totalComisiones = 0;
     for (const l of lineas) {
       const cajas     = parseFloat(l.cantidad_cajas)    || 0;
       const bpc       = parseFloat(l.botellas_por_caja) || 0;
@@ -168,6 +169,7 @@ router.put('/:id', async (req, res) => {
       const base          = cajas * precioCaja;
       const baseLineaDesc = base * (1 - dPct / 100);
       const importeCom    = baseLineaDesc * comPct / 100;
+      totalComisiones    += importeCom;
       await client.query(
         `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, precio_caja, base_imponible, comision_pct, importe_comision)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
@@ -175,6 +177,12 @@ router.put('/:id', async (req, res) => {
          precioCaja.toFixed(2), baseLineaDesc.toFixed(2), comPct, importeCom.toFixed(2)]
       );
     }
+
+    // Actualizar también total_comisiones en el pedido
+    await client.query(
+      `UPDATE pedidos SET total_comisiones=$1 WHERE id=$2`,
+      [totalComisiones.toFixed(2), req.params.id]
+    );
 
     await client.query('COMMIT');
     res.json(rows[0]);
