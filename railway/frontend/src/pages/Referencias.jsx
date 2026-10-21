@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { SectionTitle, Modal, Spinner, EmptyState, Money, useToast } from '../components/UI';
 
+const Campo = ({ label, k, type = 'text', span = 1, form, setF }) => (
+  <div className="form-group" style={{ gridColumn: `span ${span}` }}>
+    <label>{label}</label>
+    <input className="input" type={type} value={form[k] ?? ''}
+      onChange={e => setF(k, e.target.value)} />
+  </div>
+);
+
 const EMPTY = {
   codigo: '', nombre: '', bodega_entidad_id: '',
   precio_compra: '', precio_venta: '', botellas_por_caja: 6,
@@ -67,14 +75,6 @@ export default function Referencias() {
     catch (e) { toast(e.message, 'error'); }
   };
 
-  const Campo = ({ label, k, type = 'text', span = 1 }) => (
-    <div className="form-group" style={{ gridColumn: `span ${span}` }}>
-      <label>{label}</label>
-      <input className="input" type={type} value={form[k] ?? ''}
-        onChange={e => setF(k, e.target.value)} />
-    </div>
-  );
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -130,8 +130,8 @@ export default function Referencias() {
             </button>
           </>}>
           <div className="form-grid form-grid-2" style={{ gap: 12 }}>
-            <Campo label="Código *"     k="codigo" />
-            <Campo label="Nombre *"     k="nombre" span={2} />
+            <Campo label="Código *"     k="codigo"  form={form} setF={setF} />
+            <Campo label="Nombre *"     k="nombre" span={2} form={form} setF={setF} />
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Bodega *</label>
               <select className="input" value={form.bodega_entidad_id || ''}
@@ -140,10 +140,10 @@ export default function Referencias() {
                 {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre_comercial}</option>)}
               </select>
             </div>
-            <Campo label="Precio compra (€/bot)" k="precio_compra" type="number" />
-            <Campo label="Precio venta (€/bot)"  k="precio_venta"  type="number" />
-            <Campo label="Botellas por caja"      k="botellas_por_caja" type="number" />
-            <Campo label="% Comisión"             k="comision" type="number" />
+            <Campo label="Precio compra (€/bot)" k="precio_compra"    type="number" form={form} setF={setF} />
+            <Campo label="Precio venta (€/bot)"  k="precio_venta"     type="number" form={form} setF={setF} />
+            <Campo label="Botellas por caja"      k="botellas_por_caja" type="number" form={form} setF={setF} />
+            <Campo label="% Comisión"             k="comision"         type="number" form={form} setF={setF} />
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Observaciones</label>
               <textarea className="input" rows={2} value={form.observaciones || ''}

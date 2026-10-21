@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { SectionTitle, Spinner, EmptyState, Money, FechaCorta, EstadoBadge, useToast } from '../components/UI';
 
+const CampoConfig = ({ label, k, type = 'text', form, setF }) => (
+  <div className="form-group">
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
+    <input className="input" type={type} value={form[k] || ''} onChange={e => setF(k, e.target.value)} />
+  </div>
+);
+
 // ── FACTURAS ────────────────────────────────────────────────
 export function Facturas() {
   const [lista, setLista] = useState([]);
@@ -192,11 +199,7 @@ export function Configuracion() {
 
   if (loading) return <Spinner />;
 
-  const Campo = ({ label, k, type = 'text' }) => (
-    <div className="form-group">
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
-      <input className="input" type={type} value={form[k] || ''} onChange={e => setF(k, e.target.value)} />
-    </div>
+  // CampoConfig moved to module level
   );
 
   return (
@@ -205,23 +208,23 @@ export function Configuracion() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, maxWidth: 700 }}>
         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Datos del comercial</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
-          <Campo label="Nombre comercial" k="nombre_comercial" />
-          <Campo label="NIF" k="nif" />
-          <Campo label="Dirección" k="direccion" />
-          <Campo label="Población" k="poblacion" />
-          <Campo label="CP" k="cp" />
-          <Campo label="Teléfono" k="telefono" />
-          <Campo label="Email" k="email" type="email" />
-          <Campo label="IVA por defecto (%)" k="iva_defecto" type="number" />
+          <CampoConfig label="Nombre comercial" k="nombre_comercial"  form={form} setF={setF}/>
+          <CampoConfig label="NIF" k="nif"  form={form} setF={setF}/>
+          <CampoConfig label="Dirección" k="direccion"  form={form} setF={setF}/>
+          <CampoConfig label="Población" k="poblacion"  form={form} setF={setF}/>
+          <CampoConfig label="CP" k="cp"  form={form} setF={setF}/>
+          <CampoConfig label="Teléfono" k="telefono"  form={form} setF={setF}/>
+          <CampoConfig label="Email" k="email" type="email"  form={form} setF={setF}/>
+          <CampoConfig label="IVA por defecto (%)" k="iva_defecto" type="number"  form={form} setF={setF}/>
         </div>
 
         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Configuración de correo (SMTP)</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
-          <Campo label="Servidor SMTP" k="smtp_host" />
-          <Campo label="Puerto" k="smtp_puerto" type="number" />
-          <Campo label="Usuario" k="smtp_usuario" />
-          <Campo label="Contraseña" k="smtp_password" type="password" />
-          <Campo label="Remitente (From)" k="smtp_remitente" />
+          <CampoConfig label="Servidor SMTP" k="smtp_host"  form={form} setF={setF}/>
+          <CampoConfig label="Puerto" k="smtp_puerto" type="number"  form={form} setF={setF}/>
+          <CampoConfig label="Usuario" k="smtp_usuario"  form={form} setF={setF}/>
+          <CampoConfig label="Contraseña" k="smtp_password" type="password"  form={form} setF={setF}/>
+          <CampoConfig label="Remitente (From)" k="smtp_remitente"  form={form} setF={setF}/>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

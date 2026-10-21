@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { SectionTitle, Modal, Spinner, EmptyState, useToast } from '../components/UI';
 
+const Campo = ({ label, k, type = 'text', span = 1, form, setF }) => (
+  <div className="form-group" style={{ gridColumn: `span ${span}` }}>
+    <label>{label}</label>
+    <input className="input" type={type} value={form[k] || ''}
+      onChange={e => setF(k, e.target.value)} />
+  </div>
+);
+
 const TIPOS = ['bodega', 'cliente', 'comercial', 'distribuidor'];
 const TIPO_LABELS = { bodega: 'Bodega', cliente: 'Cliente', comercial: 'Comercial', distribuidor: 'Distribuidor' };
 const TIPO_COLORS = { bodega: 'badge-purple', cliente: 'badge-green', comercial: 'badge-yellow', distribuidor: 'badge-gray' };
@@ -59,12 +67,7 @@ export default function Entidades() {
     catch (e) { toast(e.message, 'error'); }
   };
 
-  const Campo = ({ label, k, type = 'text', span = 1 }) => (
-    <div className="form-group" style={{ gridColumn: `span ${span}` }}>
-      <label>{label}</label>
-      <input className="input" type={type} value={form[k] || ''}
-        onChange={e => setF(k, e.target.value)} />
-    </div>
+  // Campo moved to module level
   );
 
   return (
@@ -129,22 +132,22 @@ export default function Entidades() {
                 {TIPOS.map(t => <option key={t} value={t}>{TIPO_LABELS[t]}</option>)}
               </select>
             </div>
-            <Campo label="Código *"           k="codigo" />
-            <Campo label="Nombre comercial *" k="nombre_comercial" span={2} />
-            <Campo label="Nombre fiscal"      k="nombre_fiscal" span={2} />
-            <Campo label="NIF / CIF"          k="nif" />
-            <Campo label="Persona contacto"   k="persona_contacto" />
-            <Campo label="Teléfono"           k="telefono" />
-            <Campo label="Móvil"              k="movil" />
-            <Campo label="Email"              k="email" type="email" span={2} />
-            <Campo label="Dirección fiscal"   k="direccion_fiscal" span={2} />
-            <Campo label="Población fiscal"   k="poblacion_fiscal" />
-            <Campo label="CP fiscal"          k="cp_fiscal" />
-            <Campo label="Dirección almacén"  k="direccion_almacen" span={2} />
-            <Campo label="Población almacén"  k="poblacion_almacen" />
-            <Campo label="CP almacén"         k="cp_almacen" />
-            <Campo label="Forma de pago"      k="forma_pago" />
-            <Campo label="% Comisión defecto" k="comision_defecto" type="number" />
+            <Campo label="Código *"           k="codigo"  form={form} setF={setF}/>
+            <Campo label="Nombre comercial *" k="nombre_comercial" span={2}  form={form} setF={setF}/>
+            <Campo label="Nombre fiscal"      k="nombre_fiscal" span={2}  form={form} setF={setF}/>
+            <Campo label="NIF / CIF"          k="nif"  form={form} setF={setF}/>
+            <Campo label="Persona contacto"   k="persona_contacto"  form={form} setF={setF}/>
+            <Campo label="Teléfono"           k="telefono"  form={form} setF={setF}/>
+            <Campo label="Móvil"              k="movil"  form={form} setF={setF}/>
+            <Campo label="Email"              k="email" type="email" span={2}  form={form} setF={setF}/>
+            <Campo label="Dirección fiscal"   k="direccion_fiscal" span={2}  form={form} setF={setF}/>
+            <Campo label="Población fiscal"   k="poblacion_fiscal"  form={form} setF={setF}/>
+            <Campo label="CP fiscal"          k="cp_fiscal"  form={form} setF={setF}/>
+            <Campo label="Dirección almacén"  k="direccion_almacen" span={2}  form={form} setF={setF}/>
+            <Campo label="Población almacén"  k="poblacion_almacen"  form={form} setF={setF}/>
+            <Campo label="CP almacén"         k="cp_almacen"  form={form} setF={setF}/>
+            <Campo label="Forma de pago"      k="forma_pago"  form={form} setF={setF}/>
+            <Campo label="% Comisión defecto" k="comision_defecto" type="number"  form={form} setF={setF}/>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Observaciones</label>
               <textarea className="input" rows={3} value={form.observaciones || ''}
