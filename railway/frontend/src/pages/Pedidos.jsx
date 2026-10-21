@@ -33,6 +33,10 @@ export default function Pedidos() {
   const [pedidoSel,  setPedidoSel]  = useState(null);
   const [saving,     setSaving]     = useState(false);
 
+  // Estado editable para el detalle
+  const [detForm,   setDetForm]   = useState({});
+  const [detLineas, setDetLineas] = useState([]);
+
   const [fEstado, setFEstado] = useState('');
   const [fDesde,  setFDesde]  = useState('');
   const [fHasta,  setFHasta]  = useState('');
@@ -82,6 +86,8 @@ export default function Pedidos() {
     try {
       const { data } = await api.get(`/pedidos/${id}`);
       setPedidoSel(data);
+      setDetForm({ descuento_pct: data.descuento_pct || 0, porcentaje_iva: data.porcentaje_iva || 21 });
+      setDetLineas(data.lineas || []);
       setModal('detalle');
     } catch (e) { toast(e.message, 'error'); }
   };
@@ -331,13 +337,46 @@ export default function Pedidos() {
 
       {/* ── Modal Detalle ──────────────────────────────────── */}
       {modal === 'detalle' && pedidoSel && (() => {
-        const lineasDet = pedidoSel.lineas || [];
-        const descPct   = parseFloat(pedidoSel.descuento_pct) || 0;
-        const totalCom  = lineasDet.reduce((s, l) => {
-          const base = parseFloat(l.base_imponible) || 0;
-          const pct  = parseFloat(l.comision_pct)   || 0;
-          return s + base * pct / 100;
-        }, 0);
+        const descPct  = parseFloat(detForm.descuento_pct) || 0;
+        const ivaPct   = parseFloat(detForm.porcentaje_iva) || 21;
+        const baseTotal = detLineas.reduce((s, l) => s + baseLinea(l), 0);
+        const descEuros = baseTotal * descPct / 100;
+        const baseDesc  = baseTotal - descEuros;
+        const iva       = baseDesc * ivaPct / 100;
+        const total     = baseDesc + iva;
+        const totalCom  = detLineas.reduce((s, l) => s + comisionLinea(l, descPct), 0);
+
+        const setDetLinea = (i, k, v) => setDetLineas(l => l.map((x, idx) => idx === i ? { ...x, [k]: v } : x));
+        const quitarDetLinea = (i) => setDetLineas(l => l.filter((_, idx) => idx !== i));
+        const agregarDetLinea = () => setDetLineas(l => [...l, {
+          referencia_id: '', cantidad_cajas: 1, cajas_promo: 0,
+          botellas_por_caja: 6, precio_botella: 0, comision_pct: 0
+        }]);
+        const onDetRefChange = (i, ref_id) => {
+          const ref = referencias.find(r => r.id == ref_id);
+          if (ref) setDetLineas(l => l.map((x, idx) => idx === i ? {
+            ...x, referencia_id: ref_id,
+            ref_codigo: ref.codigo, ref_nombre: ref.nombre,
+            botellas_por_caja: ref.botellas_por_caja,
+            precio_botella: ref.precio_venta,
+            comision_pct: ref.comision
+          } : x));
+        };
+        const guardarDetalle = async () => {
+          setSaving(true);
+          try {
+            await api.put(`/pedidos/${pedidoSel.id}`, {
+              descuento_pct: descPct,
+              porcentaje_iva: ivaPct,
+              lineas: detLineas
+            });
+            toast('Pedido actualizado', 'success');
+            abrirDetalle(pedidoSel.id);
+            cargar();
+          } catch (e) { toast(e.message, 'error'); }
+          finally { setSaving(false); }
+        };
+
         return (
           <Modal title={`Pedido ${pedidoSel.serie_prefijo || ''}${pedidoSel.numero}`} onClose={() => setModal(false)}
             style={{ maxWidth: 1100, width: '95vw' }}>
@@ -346,62 +385,100 @@ export default function Pedidos() {
               <p><b>Fecha:</b> <FechaCorta fecha={pedidoSel.fecha} /> &nbsp; <EstadoBadge estado={pedidoSel.estado} /></p>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: 'var(--surface-raised)' }}>
-                    {['Ref.', 'Nombre', 'Cajas', 'Promo', 'Bot/caja', '€/bot', 'Base', '% Com.', 'Imp. Com.'].map(h => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Ref.' || h === 'Nombre' ? 'left' : 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineasDet.map((l, i) => {
-                    const base = parseFloat(l.base_imponible) || 0;
-                    const pct  = parseFloat(l.comision_pct)   || 0;
-                    const com  = base * pct / 100;
-                    return (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={td({ fontFamily: 'monospace' })}>{l.ref_codigo}</td>
-                        <td style={td()}>{l.ref_nombre}</td>
-                        <td style={td({ textAlign: 'right' })}>{l.cantidad_cajas}</td>
-                        <td style={td({ textAlign: 'right' })}>{l.cajas_promo}</td>
-                        <td style={td({ textAlign: 'right' })}>{l.botellas_por_caja}</td>
-                        <td style={td({ textAlign: 'right' })}><Money value={l.precio_botella} /></td>
-                        <td style={td({ textAlign: 'right', fontWeight: 500 })}><Money value={l.base_imponible} /></td>
-                        <td style={td({ textAlign: 'right' })}>{pct}%</td>
-                        <td style={td({ textAlign: 'right', color: 'var(--accent)', fontWeight: 500 })}>{com.toFixed(2)} €</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot></tfoot>
-              </table>
+            {/* Líneas editables */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <b style={{ fontSize: 14 }}>Líneas de pedido</b>
+                <button className="btn btn-secondary btn-sm" onClick={agregarDetLinea}>+ Añadir línea</button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--surface-raised)' }}>
+                      {['Referencia', 'Cajas', 'Bot/caja', '€/bot', 'Base', '% Com.', 'Imp. Com.', ''].map(h => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Referencia' ? 'left' : 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detLineas.map((l, i) => {
+                      const base = baseLinea(l);
+                      const com  = comisionLinea(l, descPct);
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={td()}>
+                            {l.ref_nombre ? (
+                              <span style={{ fontWeight: 500 }}>{l.ref_codigo} — {l.ref_nombre}</span>
+                            ) : (
+                              <select className="input" style={{ minWidth: 200 }} value={l.referencia_id || ''} onChange={e => onDetRefChange(i, e.target.value)}>
+                                <option value="">— Selecciona —</option>
+                                {referencias.map(r => <option key={r.id} value={r.id}>{r.codigo} — {r.nombre}</option>)}
+                              </select>
+                            )}
+                          </td>
+                          <td style={td()}>
+                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setDetLinea(i,'cantidad_cajas',e.target.value)} />
+                          </td>
+                          <td style={td()}>
+                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setDetLinea(i,'botellas_por_caja',e.target.value)} />
+                          </td>
+                          <td style={td()}>
+                            <input type="number" className="input" style={{ width: 80, textAlign: 'right' }} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
+                          </td>
+                          <td style={td({ textAlign: 'right', fontWeight: 500 })}>{base.toFixed(2)} €</td>
+                          <td style={td()}>
+                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
+                          </td>
+                          <td style={td({ textAlign: 'right', color: 'var(--accent)', fontWeight: 500 })}>{com.toFixed(2)} €</td>
+                          <td style={td()}>
+                            <button className="btn btn-danger btn-sm" onClick={() => quitarDetLinea(i)}>✕</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Barra de totales igual que en nuevo pedido */}
-            <div style={{ display: 'flex', gap: 0, background: 'var(--surface-raised)', borderRadius: 8, overflow: 'hidden', fontSize: 13, border: '1px solid var(--border)', marginTop: 12 }}>
-              {[
-                { label: 'Base', value: parseFloat(pedidoSel.base_imponible).toFixed(2) + ' €' },
-                { label: `Dto ${descPct}%`, value: '−' + (parseFloat(pedidoSel.base_imponible) * descPct / 100).toFixed(2) + ' €', color: '#e53' },
-                { label: 'Base s/dto', value: (parseFloat(pedidoSel.base_imponible) * (1 - descPct/100)).toFixed(2) + ' €' },
-                { label: `IVA ${pedidoSel.porcentaje_iva}%`, value: parseFloat(pedidoSel.iva).toFixed(2) + ' €' },
-                { label: 'TOTAL', value: parseFloat(pedidoSel.total).toFixed(2) + ' €', bold: true, accent: true },
-                { label: 'Comisiones', value: totalCom.toFixed(2) + ' €', accent: true },
-              ].map((t, i) => (
-                <div key={i} style={{ padding: '8px 14px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none', textAlign: 'right', flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{t.label}</div>
-                  <div style={{ fontWeight: t.bold ? 700 : 500, color: t.accent ? 'var(--accent)' : t.color || 'inherit', whiteSpace: 'nowrap' }}>{t.value}</div>
-                </div>
-              ))}
+            {/* Fila inferior: IVA, descuento y totales */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ minWidth: 80 }}>
+                <label>IVA %</label>
+                <input type="number" className="input" value={detForm.porcentaje_iva}
+                  onChange={e => setDetForm(f => ({ ...f, porcentaje_iva: e.target.value }))} />
+              </div>
+              <div className="form-group" style={{ minWidth: 100 }}>
+                <label>Descuento %</label>
+                <input type="number" className="input" value={detForm.descuento_pct}
+                  onChange={e => setDetForm(f => ({ ...f, descuento_pct: e.target.value }))} />
+              </div>
+              <div style={{ display: 'flex', gap: 0, background: 'var(--surface-raised)', borderRadius: 8, overflow: 'hidden', fontSize: 13, border: '1px solid var(--border)', flexShrink: 0 }}>
+                {[
+                  { label: 'Base', value: baseTotal.toFixed(2) + ' €' },
+                  { label: `Dto ${descPct}%`, value: '−' + descEuros.toFixed(2) + ' €', color: '#e53' },
+                  { label: 'Base s/dto', value: baseDesc.toFixed(2) + ' €' },
+                  { label: `IVA ${ivaPct}%`, value: iva.toFixed(2) + ' €' },
+                  { label: 'TOTAL', value: total.toFixed(2) + ' €', bold: true, accent: true },
+                  { label: 'Comisiones', value: totalCom.toFixed(2) + ' €', accent: true },
+                ].map((t, i) => (
+                  <div key={i} style={{ padding: '8px 14px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none', textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{t.label}</div>
+                    <div style={{ fontWeight: t.bold ? 700 : 500, color: t.accent ? 'var(--accent)' : t.color || 'inherit', whiteSpace: 'nowrap' }}>{t.value}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Botones dentro del scroll */}
+            {/* Botones */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 20 }}>
               <select className="input" style={{ width: 140 }} defaultValue={pedidoSel.estado}
                 onChange={e => cambiarEstado(pedidoSel.id, e.target.value)}>
                 {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+              <button className="btn btn-primary" onClick={guardarDetalle} disabled={saving}>
+                {saving ? 'Guardando…' : '💾 Guardar cambios'}
+              </button>
               <button className="btn btn-secondary" onClick={() => enviarEmail(pedidoSel.id, pedidoSel.bodega_email)}>
                 📧 Enviar email
               </button>
