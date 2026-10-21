@@ -282,53 +282,40 @@ export default function Pedidos() {
             </div>
           </div>
 
-          {/* Totales + campos pedido */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 8 }}>
-            {/* Izquierda: IVA y descuento */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="form-group">
-                <label>IVA %</label>
-                <input type="number" className="input" value={form.porcentaje_iva}
-                  onChange={e => setForm(f => ({ ...f, porcentaje_iva: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Descuento %</label>
-                <input type="number" className="input" value={form.descuento_pct}
-                  onChange={e => setForm(f => ({ ...f, descuento_pct: e.target.value }))} />
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Observaciones</label>
-                <textarea className="input" rows={2} value={form.observaciones || ''}
-                  onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} />
-              </div>
+          {/* Fila inferior: campos + totales en horizontal */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, flexWrap: 'wrap' }}>
+            {/* Campos pequeños */}
+            <div className="form-group" style={{ minWidth: 80 }}>
+              <label>IVA %</label>
+              <input type="number" className="input" value={form.porcentaje_iva}
+                onChange={e => setForm(f => ({ ...f, porcentaje_iva: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ minWidth: 100 }}>
+              <label>Descuento %</label>
+              <input type="number" className="input" value={form.descuento_pct}
+                onChange={e => setForm(f => ({ ...f, descuento_pct: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+              <label>Observaciones</label>
+              <input type="text" className="input" value={form.observaciones || ''}
+                onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} />
             </div>
 
-            {/* Derecha: resumen de totales */}
-            <div style={{ background: 'var(--surface-raised)', borderRadius: 8, padding: 16, fontSize: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Base imponible</span>
-                <span style={{ fontWeight: 500 }}>{totales.baseTotal.toFixed(2)} €</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#e53' }}>
-                <span>Descuento {form.descuento_pct || 0}%</span>
-                <span>− {totales.descEuros.toFixed(2)} €</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Base s/descuento</span>
-                <span style={{ fontWeight: 500 }}>{totales.baseDesc.toFixed(2)} €</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: 'var(--text-muted)' }}>IVA {form.porcentaje_iva}%</span>
-                <span>{totales.iva.toFixed(2)} €</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--border)', paddingTop: 10, marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: 15 }}>Total</span>
-                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--accent)' }}>{totales.total.toFixed(2)} €</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8, color: 'var(--accent)' }}>
-                <span>Total comisiones</span>
-                <span style={{ fontWeight: 600 }}>{totales.comision.toFixed(2)} €</span>
-              </div>
+            {/* Totales inline */}
+            <div style={{ display: 'flex', gap: 0, background: 'var(--surface-raised)', borderRadius: 8, overflow: 'hidden', fontSize: 13, border: '1px solid var(--border)', flexShrink: 0 }}>
+              {[
+                { label: 'Base', value: totales.baseTotal.toFixed(2) + ' €' },
+                { label: `Dto ${form.descuento_pct||0}%`, value: '−' + totales.descEuros.toFixed(2) + ' €', color: '#e53' },
+                { label: 'Base s/dto', value: totales.baseDesc.toFixed(2) + ' €' },
+                { label: `IVA ${form.porcentaje_iva}%`, value: totales.iva.toFixed(2) + ' €' },
+                { label: 'TOTAL', value: totales.total.toFixed(2) + ' €', bold: true, accent: true },
+                { label: 'Comisiones', value: totales.comision.toFixed(2) + ' €', accent: true },
+              ].map((t, i) => (
+                <div key={i} style={{ padding: '8px 14px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none', textAlign: 'right' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{t.label}</div>
+                  <div style={{ fontWeight: t.bold ? 700 : 500, color: t.accent ? 'var(--accent)' : t.color || 'inherit', whiteSpace: 'nowrap' }}>{t.value}</div>
+                </div>
+              ))}
             </div>
           </div>
 
