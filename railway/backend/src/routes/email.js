@@ -1,22 +1,27 @@
-const express    = require('express');
-const router     = express.Router();
-const db         = require('../db');
-const nodemailer = require('nodemailer');
+const express = require('express');
+const router  = express.Router();
+const db      = require('../db');
 
-async function getTransporter() {
+async function sendEmail({ to, subject, html, text }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('RESEND_API_KEY no configurada en las variables de entorno de Render.');
+
   const { rows } = await db.query(`SELECT * FROM configuracion WHERE id=1`);
   const cfg = rows[0] || {};
-  if (!cfg.smtp_host) throw new Error('SMTP no configurado. Ve a Configuración y guarda los datos de correo.');
+  const from = cfg.smtp_remitente || 'Exclusivas Villanueva <onboarding@resend.dev>';
 
-  const port = parseInt(cfg.smtp_puerto || 587);
-  return nodemailer.createTransport({
-    host: cfg.smtp_host,
-    port,
-    secure: port === 465,
-    requireTLS: port === 587,
-    auth: { user: cfg.smtp_usuario, pass: cfg.smtp_password },
-    tls: { rejectUnauthorized: false }
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from, to, subject, html, text })
   });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error al enviar email');
+  return data;
 }
 
 router.post('/pedido/:id', async (req, res) => {
@@ -74,10 +79,8 @@ router.post('/pedido/:id', async (req, res) => {
       <p style="margin-top:20px;font-size:12px;color:#666">${cfg?.nombre_comercial || 'Exclusivas Villanueva'}</p>
     `;
 
-    const transporter = await getTransporter();
-    await transporter.sendMail({
-      from: cfg.smtp_remitente || cfg.smtp_usuario,
-      to:   destinatario,
+    await sendEmail({
+      to: destinatario,
       subject: `Pedido ${p.serie_prefijo || ''}${p.numero} — ${p.entidad_nombre}`,
       html
     });
@@ -91,13 +94,13 @@ router.post('/pedido/:id', async (req, res) => {
 
 router.post('/test', async (req, res) => {
   try {
-    const transporter = await getTransporter();
     const { rows: [cfg] } = await db.query(`SELECT * FROM configuracion WHERE id=1`);
-    await transporter.sendMail({
-      from: cfg.smtp_remitente || cfg.smtp_usuario,
-      to:   req.body.email || cfg.email,
+    const to = req.body.email || cfg?.email;
+    if (!to) return res.status(400).json({ error: 'No hay email destino configurado' });
+    await sendEmail({
+      to,
       subject: 'Test email — Exclusivas Villanueva',
-      text:    'Si recibes este mensaje, el correo funciona correctamente.'
+      text: 'Si recibes este mensaje, el correo funciona correctamente.'
     });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
