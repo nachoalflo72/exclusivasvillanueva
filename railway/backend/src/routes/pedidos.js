@@ -160,12 +160,19 @@ router.put('/:id', async (req, res) => {
     // Reemplazar líneas
     await client.query(`DELETE FROM lineas_pedido WHERE pedido_id=$1`, [req.params.id]);
     for (const l of lineas) {
-      const base = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+      const cajas     = parseFloat(l.cantidad_cajas)    || 0;
+      const bpc       = parseFloat(l.botellas_por_caja) || 0;
+      const pbot      = parseFloat(l.precio_botella)    || 0;
+      const comPct    = parseFloat(l.comision_pct)      || 0;
+      const precioCaja    = pbot * bpc;
+      const base          = cajas * precioCaja;
       const baseLineaDesc = base * (1 - dPct / 100);
+      const importeCom    = baseLineaDesc * comPct / 100;
       await client.query(
-        `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, base_imponible, comision_pct)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [req.params.id, l.referencia_id, l.cantidad_cajas||0, l.cajas_promo||0, l.botellas_por_caja||0, l.precio_botella||0, baseLineaDesc, l.comision_pct||0]
+        `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, precio_caja, base_imponible, comision_pct, importe_comision)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [req.params.id, l.referencia_id, cajas, l.cajas_promo||0, bpc, pbot,
+         precioCaja.toFixed(2), baseLineaDesc.toFixed(2), comPct, importeCom.toFixed(2)]
       );
     }
 
