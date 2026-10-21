@@ -340,19 +340,7 @@ export default function Pedidos() {
         }, 0);
         return (
           <Modal title={`Pedido ${pedidoSel.serie_prefijo || ''}${pedidoSel.numero}`} onClose={() => setModal(false)}
-            style={{ maxWidth: 1100, width: '95vw' }}
-            footer={
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <select className="input" style={{ width: 140 }} defaultValue={pedidoSel.estado}
-                  onChange={e => cambiarEstado(pedidoSel.id, e.target.value)}>
-                  {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button className="btn btn-secondary" onClick={() => enviarEmail(pedidoSel.id, pedidoSel.bodega_email)}>
-                  📧 Enviar email
-                </button>
-                <button className="btn btn-secondary" onClick={() => setModal(false)}>Cerrar</button>
-              </div>
-            }>
+            style={{ maxWidth: 1100, width: '95vw' }}>
             <div style={{ marginBottom: 12 }}>
               <p><b>Cliente:</b> {pedidoSel.entidad_nombre} &nbsp; <b>Bodega:</b> {pedidoSel.bodega_nombre}</p>
               <p><b>Fecha:</b> <FechaCorta fecha={pedidoSel.fecha} /> &nbsp; <EstadoBadge estado={pedidoSel.estado} /></p>
@@ -416,6 +404,18 @@ export default function Pedidos() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+
+            {/* Botones dentro del scroll */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 20 }}>
+              <select className="input" style={{ width: 140 }} defaultValue={pedidoSel.estado}
+                onChange={e => cambiarEstado(pedidoSel.id, e.target.value)}>
+                {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <button className="btn btn-secondary" onClick={() => enviarEmail(pedidoSel.id, pedidoSel.bodega_email)}>
+                📧 Enviar email
+              </button>
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cerrar</button>
             </div>
           </Modal>
         );
