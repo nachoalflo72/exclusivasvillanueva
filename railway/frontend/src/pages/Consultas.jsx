@@ -158,27 +158,27 @@ export default function Consultas() {
               {/* Bodega */}
               {(kpis.bodega_botellas !== undefined) && (
                 <KpiGroup titulo="Bodega seleccionada">
-                  <KpiCard label="Botellas vendidas"     value={kpis.bodega_botellas}   tipo="numero" />
-                  <KpiCard label="Importe pedidos"       value={kpis.bodega_importe}    tipo="dinero" />
-                  <KpiCard label="Comisiones facturadas" value={kpis.bodega_comisiones} tipo="dinero" />
+                  <KpiCard label="Botellas vendidas"      value={kpis.bodega_botellas}   tipo="numero" />
+                  <KpiCard label="Importe de pedidos"     value={kpis.bodega_importe}    tipo="dinero" />
+                  <KpiCard label="Comisiones generadas"   value={kpis.bodega_comisiones} tipo="dinero" />
                 </KpiGroup>
               )}
 
               {/* Cliente */}
               {(kpis.cliente_botellas !== undefined) && (
                 <KpiGroup titulo="Cliente seleccionado">
-                  <KpiCard label="Botellas vendidas"  value={kpis.cliente_botellas}  tipo="numero" />
-                  <KpiCard label="Importe pedidos"    value={kpis.cliente_importe}   tipo="dinero" />
-                  <KpiCard label="Total facturado"    value={kpis.cliente_facturado} tipo="dinero" />
+                  <KpiCard label="Botellas vendidas"      value={kpis.cliente_botellas}  tipo="numero" />
+                  <KpiCard label="Importe de pedidos"     value={kpis.cliente_importe}   tipo="dinero" />
+                  <KpiCard label="Dinero facturado"       value={kpis.cliente_facturado} tipo="dinero" />
                 </KpiGroup>
               )}
 
               {/* Referencia */}
               {(kpis.ref_botellas_total !== undefined) && (
                 <KpiGroup titulo="Referencia seleccionada">
-                  <KpiCard label="Botellas totales vendidas" value={kpis.ref_botellas_total}   tipo="numero" />
+                  <KpiCard label="Botellas vendidas (total)"         value={kpis.ref_botellas_total}   tipo="numero" />
                   {kpis.ref_botellas_cliente !== undefined && (
-                    <KpiCard label="Botellas a este cliente"  value={kpis.ref_botellas_cliente} tipo="numero" />
+                    <KpiCard label="Botellas vendidas a este cliente" value={kpis.ref_botellas_cliente} tipo="numero" />
                   )}
                 </KpiGroup>
               )}
