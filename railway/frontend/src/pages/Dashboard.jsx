@@ -35,7 +35,7 @@ export default function Dashboard({ onNavigate }) {
       api.get('/entidades?tipo=cliente&activa=true').catch(() => ({ data: [] })),
       api.get('/entidades?tipo=bodega&activa=true').catch(() => ({ data: [] })),
     ]).then(([borradores, enviados, comisiones, clientes, bodegas]) => {
-      const totalComisiones = comisiones.data.reduce((s, p) => s + parseFloat(p.total_comisiones || 0), 0);
+      const totalComisiones = comisiones.data.reduce((s, p) => s + parseFloat(p.total_comisiones_real ?? p.total_comisiones ?? 0), 0);
       setData({
         borradores: borradores.data.length,
         enviados:   enviados.data.length,
