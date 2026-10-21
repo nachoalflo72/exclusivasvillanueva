@@ -8,12 +8,21 @@ router.get('/', async (req, res) => {
     let sql = `SELECT p.*,
                  e.nombre_comercial  AS entidad_nombre,
                  eb.nombre_comercial AS bodega_nombre,
-                 s.prefijo           AS serie_prefijo
+                 s.prefijo           AS serie_prefijo,
+                 COALESCE((
+                   SELECT SUM(lp.importe_comision)
+                   FROM lineas_pedido lp
+                   WHERE lp.pedido_id = p.id
+                 ), 0) AS total_comisiones_real
                FROM pedidos p
                LEFT JOIN entidades e   ON e.id  = p.entidad_id
                LEFT JOIN entidades eb  ON eb.id = p.bodega_entidad_id
                LEFT JOIN series_pedido s ON s.id = p.serie_id
-               WHERE p.total_comisiones > 0`;
+               WHERE COALESCE((
+                 SELECT SUM(lp.importe_comision)
+                 FROM lineas_pedido lp
+                 WHERE lp.pedido_id = p.id
+               ), 0) > 0`;
     const params = [];
     if (desde)    { params.push(desde);    sql += ` AND p.fecha >= $${params.length}`; }
     if (hasta)    { params.push(hasta);    sql += ` AND p.fecha <= $${params.length}`; }
