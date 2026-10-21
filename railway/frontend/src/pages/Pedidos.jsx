@@ -384,10 +384,18 @@ export default function Pedidos() {
         const guardarDetalle = async () => {
           setSaving(true);
           try {
+            const lineasSaneadas = detLineas.map(l => ({
+              referencia_id:    l.referencia_id,
+              cantidad_cajas:   parseFloat(l.cantidad_cajas)    || 0,
+              cajas_promo:      parseFloat(l.cajas_promo)       || 0,
+              botellas_por_caja:parseFloat(l.botellas_por_caja) || 0,
+              precio_botella:   parseFloat(l.precio_botella)    || 0,
+              comision_pct:     parseFloat(l.comision_pct)      || 0,
+            }));
             await api.put(`/pedidos/${pedidoSel.id}`, {
               descuento_pct: descPct,
               porcentaje_iva: ivaPct,
-              lineas: detLineas
+              lineas: lineasSaneadas
             });
             toast('Pedido actualizado', 'success');
             abrirDetalle(pedidoSel.id);
