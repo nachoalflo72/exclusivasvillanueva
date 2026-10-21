@@ -130,6 +130,53 @@ router.post('/', async (req, res) => {
   } finally { client.release(); }
 });
 
+// Actualiza descuento, IVA y líneas de un pedido
+router.put('/:id', async (req, res) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { descuento_pct, porcentaje_iva, lineas } = req.body;
+
+    // Recalcular totales
+    let baseTotal = 0;
+    for (const l of lineas) {
+      const base = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+      baseTotal += base;
+    }
+    const dPct      = parseFloat(descuento_pct) || 0;
+    const ivaPct    = parseFloat(porcentaje_iva) || 21;
+    const baseDesc  = baseTotal * (1 - dPct / 100);
+    const iva       = baseDesc * ivaPct / 100;
+    const total     = baseDesc + iva;
+
+    const { rows } = await client.query(
+      `UPDATE pedidos SET descuento_pct=$1, porcentaje_iva=$2,
+         base_imponible=$3, iva=$4, total=$5
+       WHERE id=$6 RETURNING *`,
+      [dPct, ivaPct, baseDesc, iva, total, req.params.id]
+    );
+    if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'No encontrado' }); }
+
+    // Reemplazar líneas
+    await client.query(`DELETE FROM lineas_pedido WHERE pedido_id=$1`, [req.params.id]);
+    for (const l of lineas) {
+      const base = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+      const baseLineaDesc = base * (1 - dPct / 100);
+      await client.query(
+        `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, base_imponible, comision_pct)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [req.params.id, l.referencia_id, l.cantidad_cajas||0, l.cajas_promo||0, l.botellas_por_caja||0, l.precio_botella||0, baseLineaDesc, l.comision_pct||0]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json(rows[0]);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
 router.put('/:id/estado', async (req, res) => {
   try {
     const { rows } = await db.query(
