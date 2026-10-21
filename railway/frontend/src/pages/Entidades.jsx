@@ -67,9 +67,6 @@ export default function Entidades() {
     catch (e) { toast(e.message, 'error'); }
   };
 
-  // Campo moved to module level
-  );
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

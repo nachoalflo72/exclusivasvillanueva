@@ -199,9 +199,6 @@ export function Configuracion() {
 
   if (loading) return <Spinner />;
 
-  // CampoConfig moved to module level
-  );
-
   return (
     <div>
       <SectionTitle>Configuración</SectionTitle>
