@@ -236,11 +236,30 @@ export default function Pedidos() {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: 'auto' }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 40 }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: 'var(--surface-raised)', borderBottom: '1px solid var(--border)' }}>
-                    {['Referencia', 'Cajas', 'Bot/caja', '€/bot', 'Base', '% Com.', 'Imp. Com.', ''].map(h => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Referencia' ? 'left' : 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                    {[
+                      { h: 'Referencia', align: 'left' },
+                      { h: 'Cajas', align: 'right' },
+                      { h: 'Bot/caja', align: 'right' },
+                      { h: '€/bot', align: 'right' },
+                      { h: 'Base', align: 'right' },
+                      { h: '% Com.', align: 'right' },
+                      { h: 'Imp. Com.', align: 'right' },
+                      { h: '', align: 'center' },
+                    ].map(({ h, align }) => (
+                      <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -256,20 +275,20 @@ export default function Pedidos() {
                             {referencias.map(r => <option key={r.id} value={r.id}>{r.codigo} — {r.nombre}</option>)}
                           </select>
                         </td>
-                        <td style={td()}>
-                          <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setLinea(i,'cantidad_cajas',e.target.value)} />
+                        <td style={td({ textAlign: 'right' })}>
+                          <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setLinea(i,'cantidad_cajas',e.target.value)} />
                         </td>
-                        <td style={td()}>
-                          <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setLinea(i,'botellas_por_caja',e.target.value)} />
+                        <td style={td({ textAlign: 'right' })}>
+                          <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setLinea(i,'botellas_por_caja',e.target.value)} />
                         </td>
-                        <td style={td()}>
-                          <input type="number" className="input" style={{ width: 80, textAlign: 'right' }} value={l.precio_botella} onChange={e => setLinea(i,'precio_botella',e.target.value)} />
+                        <td style={td({ textAlign: 'right' })}>
+                          <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.precio_botella} onChange={e => setLinea(i,'precio_botella',e.target.value)} />
                         </td>
                         <td style={td({ textAlign: 'right', fontWeight: 500 })}>
                           {base.toFixed(2)} €
                         </td>
-                        <td style={td()}>
-                          <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.comision_pct} onChange={e => setLinea(i,'comision_pct',e.target.value)} />
+                        <td style={td({ textAlign: 'right' })}>
+                          <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.comision_pct} onChange={e => setLinea(i,'comision_pct',e.target.value)} />
                         </td>
                         <td style={td({ textAlign: 'right', color: 'var(--accent)', fontWeight: 500 })}>
                           {com.toFixed(2)} €
@@ -392,11 +411,30 @@ export default function Pedidos() {
                 <button className="btn btn-secondary btn-sm" onClick={agregarDetLinea}>+ Añadir línea</button>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: 'auto' }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 40 }} />
+                  </colgroup>
                   <thead>
                     <tr style={{ background: 'var(--surface-raised)' }}>
-                      {['Referencia', 'Cajas', 'Bot/caja', '€/bot', 'Base', '% Com.', 'Imp. Com.', ''].map(h => (
-                        <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Referencia' ? 'left' : 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                      {[
+                        { h: 'Referencia', align: 'left' },
+                        { h: 'Cajas', align: 'right' },
+                        { h: 'Bot/caja', align: 'right' },
+                        { h: '€/bot', align: 'right' },
+                        { h: 'Base', align: 'right' },
+                        { h: '% Com.', align: 'right' },
+                        { h: 'Imp. Com.', align: 'right' },
+                        { h: '', align: 'center' },
+                      ].map(({ h, align }) => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -416,18 +454,18 @@ export default function Pedidos() {
                               </select>
                             )}
                           </td>
-                          <td style={td()}>
-                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setDetLinea(i,'cantidad_cajas',e.target.value)} />
+                          <td style={td({ textAlign: 'right' })}>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setDetLinea(i,'cantidad_cajas',e.target.value)} />
                           </td>
-                          <td style={td()}>
-                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setDetLinea(i,'botellas_por_caja',e.target.value)} />
+                          <td style={td({ textAlign: 'right' })}>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setDetLinea(i,'botellas_por_caja',e.target.value)} />
                           </td>
-                          <td style={td()}>
-                            <input type="number" className="input" style={{ width: 80, textAlign: 'right' }} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
+                          <td style={td({ textAlign: 'right' })}>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
                           </td>
                           <td style={td({ textAlign: 'right', fontWeight: 500 })}>{base.toFixed(2)} €</td>
-                          <td style={td()}>
-                            <input type="number" className="input" style={{ width: 70, textAlign: 'right' }} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
+                          <td style={td({ textAlign: 'right' })}>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
                           </td>
                           <td style={td({ textAlign: 'right', color: 'var(--accent)', fontWeight: 500 })}>{com.toFixed(2)} €</td>
                           <td style={td()}>
