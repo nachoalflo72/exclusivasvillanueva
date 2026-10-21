@@ -82,7 +82,7 @@ export function Comisiones() {
 
   const totalSel = lista
     .filter(p => seleccionados.includes(p.id))
-    .reduce((s, p) => s + parseFloat(p.total_comisiones || 0), 0);
+    .reduce((s, p) => s + parseFloat(p.total_comisiones_real || p.total_comisiones || 0), 0);
 
   return (
     <div>
@@ -116,7 +116,7 @@ export function Comisiones() {
                   <td style={{ padding: '10px 14px' }}>{p.entidad_nombre}</td>
                   <td style={{ padding: '10px 14px' }}>{p.bodega_nombre}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--accent)' }}>
-                    <Money value={p.total_comisiones} />
+                    <Money value={p.total_comisiones_real ?? p.total_comisiones} />
                   </td>
                 </tr>
               ))}
