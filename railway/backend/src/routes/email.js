@@ -6,9 +6,7 @@ async function sendEmail({ to, subject, html, text }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY no configurada en las variables de entorno de Render.');
 
-  const { rows } = await db.query(`SELECT * FROM configuracion WHERE id=1`);
-  const cfg = rows[0] || {};
-  const from = cfg.smtp_remitente || 'Exclusivas Villanueva <onboarding@resend.dev>';
+  const from = 'Exclusivas Villanueva <onboarding@resend.dev>';
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
