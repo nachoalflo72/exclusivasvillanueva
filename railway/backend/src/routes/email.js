@@ -270,11 +270,11 @@ router.post('/pedido/:id', async (req, res) => {
       const baseLD  = baseL * (1 - dPct / 100);
       return `
         <tr>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8">${l.ref_codigo} - ${l.ref_nombre}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${cajasP > 0 ? cajas + '+' + cajasP : cajas}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${botellas}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${dPct > 0 ? dPct + '%' : '—'}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right"><b>${fmt(baseLD)}</b></td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;white-space:nowrap">${l.ref_nombre}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${cajasP > 0 ? cajas + '+' + cajasP : cajas}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${botellas}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${fmt(pbot)}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap"><b>${fmt(baseLD)}</b></td>
         </tr>`;
     }).join('');
 
@@ -303,7 +303,7 @@ router.post('/pedido/:id', async (req, res) => {
         <th style="padding:7px 8px;text-align:left;font-weight:bold">Producto</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Cajas</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Botellas</th>
-        <th style="padding:7px 8px;text-align:right;font-weight:bold">Descuento</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio/bot.</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Importe</th>
       </tr>
     </thead>
