@@ -53,6 +53,8 @@ router.get('/:id', async (req, res) => {
               e.nif AS entidad_nif, e.direccion_fiscal, e.poblacion_fiscal, e.cp_fiscal,
               e.direccion_almacen, e.poblacion_almacen,
               eb.nombre_comercial AS bodega_nombre, eb.email AS bodega_email,
+              eb.direccion_fiscal AS bodega_direccion, eb.poblacion_fiscal AS bodega_poblacion,
+              eb.cp_fiscal AS bodega_cp, eb.provincia_fiscal AS bodega_provincia, eb.nif AS bodega_nif,
               s.nombre AS serie_nombre, s.prefijo AS serie_prefijo
        FROM pedidos p
        LEFT JOIN entidades e   ON e.id  = p.entidad_id
