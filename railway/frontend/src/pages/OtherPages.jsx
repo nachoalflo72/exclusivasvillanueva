@@ -203,6 +203,32 @@ export function Configuracion() {
     <div>
       <SectionTitle>Configuración</SectionTitle>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, maxWidth: 700 }}>
+        {/* ── Logo ── */}
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Logo (aparece en la impresión del pedido)</h3>
+        <div style={{ marginBottom: 24 }}>
+          {form.logo ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 10 }}>
+              <img src={form.logo} alt="Logo" style={{ maxHeight: 80, maxWidth: 240, border: '1px solid var(--border)', borderRadius: 6, padding: 6, background: '#fff' }} />
+              <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setF('logo', null)}>
+                🗑️ Eliminar logo
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Sin logo configurado</p>
+          )}
+          <label style={{ display: 'inline-block', cursor: 'pointer' }}>
+            <span className="btn btn-secondary" style={{ fontSize: 12 }}>📁 {form.logo ? 'Cambiar imagen' : 'Subir imagen'}</span>
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+              const file = e.target.files[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = ev => setF('logo', ev.target.result);
+              reader.readAsDataURL(file);
+            }} />
+          </label>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 10 }}>PNG, JPG o SVG recomendado</span>
+        </div>
+
         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Datos del comercial</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
           <CampoConfig label="Nombre comercial" k="nombre_comercial"  form={form} setF={setF}/>
