@@ -211,6 +211,7 @@ export function Configuracion() {
           <CampoConfig label="Población" k="poblacion"  form={form} setF={setF}/>
           <CampoConfig label="CP" k="cp"  form={form} setF={setF}/>
           <CampoConfig label="Teléfono" k="telefono"  form={form} setF={setF}/>
+          <CampoConfig label="Móvil" k="movil"  form={form} setF={setF}/>
           <CampoConfig label="Email" k="email" type="email"  form={form} setF={setF}/>
           <CampoConfig label="IVA por defecto (%)" k="iva_defecto" type="number"  form={form} setF={setF}/>
         </div>
