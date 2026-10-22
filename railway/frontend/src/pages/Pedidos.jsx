@@ -144,6 +144,197 @@ export default function Pedidos() {
     } catch (e) { toast(e.message, 'error'); }
   };
 
+  const imprimirPedido = async (pedido, lineas, descPct, ivaPct) => {
+    // Cargar configuración del comercial
+    let cfg = {};
+    try { const { data } = await api.get('/configuracion'); cfg = data || {}; } catch {}
+
+    const fmt = (n) => parseFloat(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const baseTotal = lineas.reduce((s, l) => s + baseLinea(l), 0);
+    const descEuros = baseTotal * descPct / 100;
+    const baseDesc  = baseTotal - descEuros;
+    const ivaEuros  = baseDesc * ivaPct / 100;
+    const total     = baseDesc + ivaEuros;
+
+    const filasLineas = lineas.map(l => {
+      const cajas = parseFloat(l.cantidad_cajas) || 0;
+      const cajasPromo = parseFloat(l.cajas_promo) || 0;
+      const bpc   = parseFloat(l.botellas_por_caja) || 0;
+      const pbot  = parseFloat(l.precio_botella) || 0;
+      const uds   = cajas * bpc;
+      const base  = baseLinea(l);
+      const baseD = base * (1 - descPct / 100);
+      const precioNeto = uds > 0 ? baseD / uds : 0;
+      const nombre = l.ref_nombre || l.nombre || '';
+      const codigo = l.ref_codigo || l.codigo || '';
+      return `
+        <tr>
+          <td>${l.referencia_id || ''}</td>
+          <td>${codigo ? codigo + ' - ' : ''}${nombre}</td>
+          <td style="text-align:right">${cajas}${cajasPromo > 0 ? '+' + cajasPromo : ''}</td>
+          <td style="text-align:right">${uds}</td>
+          <td style="text-align:right">${fmt(pbot)}</td>
+          <td style="text-align:right">${descPct > 0 ? descPct + '%' : ''}</td>
+          <td style="text-align:right">${fmt(precioNeto)}</td>
+          <td style="text-align:right">${fmt(baseD)}</td>
+          <td style="text-align:center">G</td>
+        </tr>`;
+    }).join('');
+
+    const fechaFormateada = pedido.fecha ? new Date(pedido.fecha).toLocaleDateString('es-ES') : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pedido ${pedido.serie_prefijo || ''}${pedido.numero}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #222; padding: 20px 30px; }
+  .cabecera { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 2px solid #333; padding-bottom: 12px; }
+  .logo-area { display: flex; flex-direction: column; }
+  .empresa-nombre { font-size: 22pt; font-weight: bold; letter-spacing: 1px; color: #1a1a1a; }
+  .empresa-subtitulo { font-size: 9pt; color: #555; margin-top: 2px; font-style: italic; }
+  .pedido-ref { text-align: right; }
+  .pedido-ref h2 { font-size: 13pt; font-weight: bold; margin-bottom: 4px; }
+  .pedido-ref .meta { font-size: 9pt; color: #555; margin-top: 4px; }
+  .seccion { display: flex; gap: 30px; margin-bottom: 16px; }
+  .bloque { flex: 1; }
+  .bloque h3 { font-size: 9pt; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 3px; margin-bottom: 6px; }
+  .bloque p { font-size: 9pt; margin-bottom: 2px; color: #333; }
+  .bloque .nombre-principal { font-weight: bold; font-size: 10pt; color: #111; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 16px; }
+  table thead tr { border-bottom: 1px solid #333; border-top: 1px solid #333; }
+  table th { padding: 5px 6px; font-size: 8.5pt; font-weight: bold; color: #333; }
+  table td { padding: 5px 6px; border-bottom: 1px solid #ddd; }
+  .totales-tabla { width: 320px; margin-left: auto; }
+  .totales-tabla td { padding: 4px 8px; font-size: 9pt; }
+  .totales-tabla .fila-total { font-weight: bold; border-top: 2px solid #333; border-bottom: 2px solid #333; }
+  .gran-total { text-align: right; margin-top: 16px; }
+  .gran-total .etiqueta { font-size: 14pt; font-weight: bold; display: inline-block; margin-right: 12px; }
+  .gran-total .valor { font-size: 16pt; font-weight: bold; }
+  .observaciones { margin-bottom: 16px; }
+  .observaciones h3 { font-size: 9pt; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 3px; margin-bottom: 6px; }
+  .pie { margin-top: 24px; padding-top: 10px; border-top: 1px solid #ccc; display: flex; gap: 30px; font-size: 7.5pt; color: #555; }
+  .pie .col { flex: 1; }
+  .pie h4 { font-weight: bold; margin-bottom: 4px; font-size: 8pt; color: #333; }
+  .lopd { margin-top: 10px; font-size: 6.5pt; color: #888; line-height: 1.4; border-top: 1px solid #eee; padding-top: 8px; }
+  @media print { body { padding: 10px 15px; } }
+</style>
+</head>
+<body>
+
+<div class="cabecera">
+  <div class="logo-area">
+    <div class="empresa-nombre">EXCLUSIVAS<br>VILLANUEVA, S.L.</div>
+    <div class="empresa-subtitulo">Vinos con Denominación de Origen</div>
+  </div>
+  <div class="pedido-ref">
+    <h2>Pedido de compra nº ${pedido.serie_prefijo || ''}${pedido.numero}</h2>
+    <div class="meta">Página 1 de 1</div>
+    <div class="meta">Su refª.:</div>
+    <div class="meta">Fecha pedido:&nbsp;&nbsp;${fechaFormateada}</div>
+  </div>
+</div>
+
+<div class="seccion">
+  <div class="bloque">
+    <h3>Datos proveedor</h3>
+    <p class="nombre-principal">${pedido.bodega_nombre || ''}</p>
+    ${pedido.bodega_direccion ? `<p>${pedido.bodega_direccion}</p>` : ''}
+    ${pedido.bodega_cp || pedido.bodega_poblacion ? `<p>${[pedido.bodega_cp, pedido.bodega_poblacion].filter(Boolean).join(' ')}</p>` : ''}
+    ${pedido.bodega_provincia ? `<p>${pedido.bodega_provincia}</p>` : ''}
+  </div>
+  <div class="bloque">
+    <h3>Cliente</h3>
+    <p class="nombre-principal">${pedido.entidad_nombre || ''}</p>
+    ${pedido.direccion_fiscal ? `<p>${pedido.direccion_fiscal}</p>` : ''}
+    ${pedido.cp_fiscal || pedido.poblacion_fiscal ? `<p>${[pedido.cp_fiscal, pedido.poblacion_fiscal].filter(Boolean).join(' ')}</p>` : ''}
+    ${pedido.provincia_fiscal ? `<p>${pedido.provincia_fiscal}</p>` : ''}
+    ${pedido.entidad_nif ? `<p>NIF: ${pedido.entidad_nif}</p>` : ''}
+  </div>
+</div>
+
+<h3 style="font-size:9pt;font-weight:bold;text-transform:uppercase;border-bottom:1px solid #333;padding-bottom:3px;margin-bottom:8px;">Artículos</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left;width:50px">Ref.</th>
+      <th style="text-align:left">Descripción</th>
+      <th style="text-align:right;width:55px">Cajas</th>
+      <th style="text-align:right;width:45px">Uds.</th>
+      <th style="text-align:right;width:60px">Precio ud.</th>
+      <th style="text-align:right;width:45px">Dto.</th>
+      <th style="text-align:right;width:60px">Precio neto</th>
+      <th style="text-align:right;width:70px">Importe</th>
+      <th style="text-align:center;width:25px">IVA</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${filasLineas}
+  </tbody>
+</table>
+
+${pedido.observaciones ? `
+<div class="observaciones">
+  <h3>Observaciones</h3>
+  <p style="font-size:9pt">${pedido.observaciones}</p>
+</div>` : '<div class="observaciones"><h3>Observaciones</h3></div>'}
+
+<table class="totales-tabla">
+  <thead>
+    <tr style="border-bottom:1px solid #333;border-top:1px solid #333">
+      <th style="text-align:right">Base Imponible</th>
+      <th style="text-align:right">% IVA</th>
+      <th style="text-align:right">Cuota IVA</th>
+      <th style="text-align:right">% R. E.</th>
+      <th style="text-align:right">Cuota R. E.</th>
+      <th style="text-align:right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align:right">${fmt(baseDesc)}</td>
+      <td style="text-align:right">${ivaPct},00</td>
+      <td style="text-align:right">${fmt(ivaEuros)}</td>
+      <td style="text-align:right"></td>
+      <td style="text-align:right"></td>
+      <td style="text-align:right">${fmt(total)}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="gran-total">
+  <span class="etiqueta">T O T A L</span>
+  <span class="valor">${fmt(total)}€</span>
+</div>
+
+<div class="pie">
+  <div class="col">
+    <h4>Nuestra dirección postal</h4>
+    <p>${cfg.direccion || ''}</p>
+    <p>${[cfg.cp, cfg.poblacion].filter(Boolean).join(' ')}</p>
+    <p>${cfg.provincia || 'Asturias'}</p>
+    <p>España</p>
+  </div>
+  <div class="col">
+    <h4>Nuestros datos de contacto</h4>
+    ${cfg.telefono ? `<p>Tfno: ${cfg.telefono}</p>` : ''}
+    ${cfg.email ? `<p>Email: ${cfg.email}</p>` : ''}
+  </div>
+</div>
+
+</body>
+</html>`;
+
+    const ventana = window.open('', '_blank', 'width=900,height=700');
+    ventana.document.write(html);
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(() => { ventana.print(); }, 400);
+  };
+
   // Estilo celda tabla
   const td = (extra = {}) => ({ padding: '8px 10px', ...extra });
 
@@ -524,6 +715,9 @@ export default function Pedidos() {
               </select>
               <button className="btn btn-primary" onClick={guardarDetalle} disabled={saving}>
                 {saving ? 'Guardando…' : '💾 Guardar cambios'}
+              </button>
+              <button className="btn btn-secondary" onClick={() => imprimirPedido(pedidoSel, detLineas, descPct, ivaPct)}>
+                🖨️ Imprimir
               </button>
               <button className="btn btn-secondary" onClick={() => enviarEmail(pedidoSel.id, pedidoSel.bodega_email)}>
                 📧 Enviar email
