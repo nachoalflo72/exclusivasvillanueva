@@ -226,8 +226,11 @@ export default function Pedidos() {
 
 <div class="cabecera">
   <div class="logo-area">
-    <div class="empresa-nombre">EXCLUSIVAS<br>VILLANUEVA, S.L.</div>
-    <div class="empresa-subtitulo">Vinos con Denominación de Origen</div>
+    ${cfg.logo
+      ? `<img src="${cfg.logo}" alt="Logo" style="max-height:80px;max-width:200px;object-fit:contain;margin-bottom:4px">`
+      : `<div class="empresa-nombre">EXCLUSIVAS<br>VILLANUEVA, S.L.</div>
+    <div class="empresa-subtitulo">Vinos con Denominación de Origen</div>`
+    }
   </div>
   <div class="pedido-ref">
     <h2>Pedido de compra nº ${pedido.serie_prefijo || ''}${pedido.numero}</h2>
