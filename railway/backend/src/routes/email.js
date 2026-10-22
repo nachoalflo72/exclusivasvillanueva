@@ -265,16 +265,15 @@ router.post('/pedido/:id', async (req, res) => {
       const cajasP  = parseFloat(l.cajas_promo)    || 0;
       const bpc     = parseFloat(l.botellas_por_caja) || 0;
       const pbot    = parseFloat(l.precio_botella) || 0;
-      const uds     = cajas * bpc;
+      const botellas = (cajas + cajasP) * bpc;
       const baseL   = cajas * bpc * pbot;
       const baseLD  = baseL * (1 - dPct / 100);
-      const pneto   = uds > 0 ? baseLD / uds : 0;
       return `
         <tr>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8">${l.ref_codigo} - ${l.ref_nombre}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${cajasP > 0 ? cajas + '+' + cajasP : cajas}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${uds}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${fmt(pneto)}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${botellas}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right">${dPct > 0 ? dPct + '%' : '—'}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right"><b>${fmt(baseLD)}</b></td>
         </tr>`;
     }).join('');
@@ -303,8 +302,8 @@ router.post('/pedido/:id', async (req, res) => {
       <tr style="border-bottom:2px solid #333">
         <th style="padding:7px 8px;text-align:left;font-weight:bold">Producto</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Cajas</th>
-        <th style="padding:7px 8px;text-align:right;font-weight:bold">Unidades</th>
-        <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">Botellas</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">Descuento</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Importe</th>
       </tr>
     </thead>
