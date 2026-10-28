@@ -24,14 +24,15 @@ export function ToastProvider({ children }) {
 export const useToast = () => useContext(ToastCtx);
 
 // ── Modal ─────────────────────────────────────────────────
-export function Modal({ title, onClose, children, footer, style }) {
+export function Modal({ title, onClose, children, footer, style, zIndex }) {
   useEffect(() => {
     const fn = e => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', fn);
     return () => document.removeEventListener('keydown', fn);
   }, [onClose]);
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay" style={zIndex ? { zIndex } : undefined}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={style}>
         <div className="modal-title">{title}</div>
         {children}
