@@ -87,16 +87,14 @@ function generarPDFPedido(p, lineas, cfg) {
     doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.5).stroke();
     y += 14;
 
-    // Cabecera columnas
+    // Cabecera columnas — mismas que el email: Producto, Cajas, Botellas, Precio/bot., % Dto., Importe
     const cols = [
-      { label: 'Ref.',        x: LEFT,       w: 40,  align: 'left'  },
-      { label: 'Descripción', x: LEFT + 42,  w: 160, align: 'left'  },
-      { label: 'Cajas',       x: LEFT + 205, w: 45,  align: 'right' },
-      { label: 'Uds.',        x: LEFT + 253, w: 40,  align: 'right' },
-      { label: 'Precio ud.',  x: LEFT + 296, w: 55,  align: 'right' },
-      { label: 'Dto.',        x: LEFT + 354, w: 40,  align: 'right' },
-      { label: 'Precio neto', x: LEFT + 397, w: 55,  align: 'right' },
-      { label: 'Importe',     x: LEFT + 455, w: 60,  align: 'right' },
+      { label: 'Producto',    x: LEFT,       w: 230, align: 'left'  },
+      { label: 'Cajas',       x: LEFT + 233, w: 45,  align: 'right' },
+      { label: 'Botellas',    x: LEFT + 281, w: 50,  align: 'right' },
+      { label: 'Precio/bot.', x: LEFT + 334, w: 55,  align: 'right' },
+      { label: '% Dto.',      x: LEFT + 392, w: 40,  align: 'right' },
+      { label: 'Importe',     x: LEFT + 435, w: 80,  align: 'right' },
     ];
 
     doc.fontSize(8).font('Helvetica-Bold');
@@ -104,31 +102,39 @@ function generarPDFPedido(p, lineas, cfg) {
     doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.5).stroke();
     y += 14;
 
-    // Filas
+    // Filas — cada línea ocupa exactamente una fila (ellipsis si el nombre es muy largo)
     doc.font('Helvetica').fontSize(8);
     lineas.forEach(l => {
       const cajas    = parseFloat(l.cantidad_cajas) || 0;
       const cajasP   = parseFloat(l.cajas_promo)    || 0;
       const bpc      = parseFloat(l.botellas_por_caja) || 0;
       const pbot     = parseFloat(l.precio_botella) || 0;
-      const uds      = cajas * bpc;
+      const botellas = (cajas + cajasP) * bpc;
       const baseL    = cajas * bpc * pbot;
       // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
-      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
-                       ? parseFloat(l.descuento_linea_pct) : 0;
-      const baseLD   = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      const dtoLinea   = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                         ? parseFloat(l.descuento_linea_pct) : 0;
+      const baseLD     = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
       const dtoMostrar = dtoLinea > 0 ? dtoLinea : dPct;
-      const pneto    = uds > 0 ? baseLD / uds : 0;
-      const cajasStr = cajasP > 0 ? `${cajas}+${cajasP}` : `${cajas}`;
+      const cajasStr   = cajasP > 0 ? `${cajas}+${cajasP}` : `${cajas}`;
+      const nombre     = l.ref_nombre || '';
 
-      doc.text(String(l.referencia_id || ''), cols[0].x, y, { width: cols[0].w, align: 'left' });
-      doc.text(`${l.ref_codigo || ''} - ${l.ref_nombre || ''}`, cols[1].x, y, { width: cols[1].w, align: 'left' });
-      doc.text(cajasStr,       cols[2].x, y, { width: cols[2].w, align: 'right' });
-      doc.text(String(uds),    cols[3].x, y, { width: cols[3].w, align: 'right' });
-      doc.text(fmt(pbot),      cols[4].x, y, { width: cols[4].w, align: 'right' });
-      doc.text(dtoMostrar > 0 ? `${dtoMostrar}%` : '', cols[5].x, y, { width: cols[5].w, align: 'right' });
-      doc.text(fmt(pneto),     cols[6].x, y, { width: cols[6].w, align: 'right' });
-      doc.text(fmt(baseLD),    cols[7].x, y, { width: cols[7].w, align: 'right' });
+      // Truncar nombre si no cabe en una línea
+      const maxW = cols[0].w;
+      let nombreTrunc = nombre;
+      if (doc.widthOfString(nombreTrunc) > maxW) {
+        while (nombreTrunc.length > 0 && doc.widthOfString(nombreTrunc + '…') > maxW) {
+          nombreTrunc = nombreTrunc.slice(0, -1);
+        }
+        nombreTrunc += '…';
+      }
+
+      doc.text(nombreTrunc,   cols[0].x, y, { width: cols[0].w, align: 'left',  lineBreak: false });
+      doc.text(cajasStr,      cols[1].x, y, { width: cols[1].w, align: 'right', lineBreak: false });
+      doc.text(String(botellas), cols[2].x, y, { width: cols[2].w, align: 'right', lineBreak: false });
+      doc.text(fmt(pbot),     cols[3].x, y, { width: cols[3].w, align: 'right', lineBreak: false });
+      doc.text(dtoMostrar > 0 ? `${dtoMostrar}%` : '—', cols[4].x, y, { width: cols[4].w, align: 'right', lineBreak: false });
+      doc.text(fmt(baseLD),   cols[5].x, y, { width: cols[5].w, align: 'right', lineBreak: false });
       doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.3).strokeColor('#ccc').stroke();
       doc.strokeColor('#000');
       y += 14;
@@ -144,30 +150,27 @@ function generarPDFPedido(p, lineas, cfg) {
       y += 14;
     }
 
-    // ── Tabla totales ─────────────────────────────────────────
+    // ── Tabla totales: Base | % IVA | Cuota IVA | % Dto. | Total ──
     y += 10;
-    const totX = LEFT + 200;
-    const totW = W - 200;
+    const totX = LEFT + 165;
     doc.fontSize(8).font('Helvetica-Bold');
     const totCols = [
-      { label: 'Base Imponible', x: totX,       w: 80 },
-      { label: '% IVA',          x: totX + 83,  w: 40 },
-      { label: 'Cuota IVA',      x: totX + 126, w: 65 },
-      { label: '% R.E.',         x: totX + 194, w: 40 },
-      { label: 'Cuota R.E.',     x: totX + 237, w: 55 },
-      { label: 'Total',          x: totX + 295, w: 60 },
+      { label: 'Base Imponible', x: totX,       w: 85 },
+      { label: '% IVA',          x: totX + 88,  w: 40 },
+      { label: 'Cuota IVA',      x: totX + 131, w: 65 },
+      { label: '% Dto.',         x: totX + 199, w: 50 },
+      { label: 'Total',          x: totX + 252, w: 98 },
     ];
     totCols.forEach(c => doc.text(c.label, c.x, y, { width: c.w, align: 'right' }));
     doc.moveTo(totX, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.5).stroke();
     doc.moveTo(totX, y - 1).lineTo(LEFT + W, y - 1).lineWidth(0.5).stroke();
     y += 14;
     doc.font('Helvetica').fontSize(8);
-    doc.text(fmt(baseDesc),      totCols[0].x, y, { width: totCols[0].w, align: 'right' });
-    doc.text(`${ivaPct},00`,     totCols[1].x, y, { width: totCols[1].w, align: 'right' });
-    doc.text(fmt(ivaEuros),      totCols[2].x, y, { width: totCols[2].w, align: 'right' });
-    doc.text('',                 totCols[3].x, y, { width: totCols[3].w, align: 'right' });
-    doc.text('',                 totCols[4].x, y, { width: totCols[4].w, align: 'right' });
-    doc.text(fmt(total),         totCols[5].x, y, { width: totCols[5].w, align: 'right' });
+    doc.text(fmt(baseDesc),          totCols[0].x, y, { width: totCols[0].w, align: 'right' });
+    doc.text(`${ivaPct},00`,         totCols[1].x, y, { width: totCols[1].w, align: 'right' });
+    doc.text(fmt(ivaEuros),          totCols[2].x, y, { width: totCols[2].w, align: 'right' });
+    doc.text(dPct > 0 ? `${dPct}%` : '—', totCols[3].x, y, { width: totCols[3].w, align: 'right' });
+    doc.text(fmt(total),             totCols[4].x, y, { width: totCols[4].w, align: 'right' });
 
     // ── Gran total ────────────────────────────────────────────
     y += 28;
