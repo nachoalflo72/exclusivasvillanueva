@@ -12,12 +12,17 @@ const baseLinea = (l) => {
   return cajas * bpc * pbot;
 };
 
-// Calcula importe comisión de una línea (sobre base, aplicando descuento pedido)
+// Calcula base con descuento de una línea (usa descuento de línea si existe, si no el del pedido)
+const baseDescLinea = (l, descuentoPedidoPct) => {
+  const base = baseLinea(l);
+  const dPct = parseFloat(l.descuento_linea_pct ?? descuentoPedidoPct) || 0;
+  return base * (1 - dPct / 100);
+};
+
+// Calcula importe comisión de una línea
 const comisionLinea = (l, descuentoPct) => {
-  const base   = baseLinea(l);
-  const dPct   = parseFloat(descuentoPct) || 0;
-  const baseDesc = base * (1 - dPct / 100);
-  const pct    = parseFloat(l.comision_pct) || 0;
+  const baseDesc = baseDescLinea(l, descuentoPct);
+  const pct = parseFloat(l.comision_pct) || 0;
   return baseDesc * pct / 100;
 };
 
@@ -40,6 +45,11 @@ export default function Pedidos() {
   const [fEstado, setFEstado] = useState('');
   const [fDesde,  setFDesde]  = useState('');
   const [fHasta,  setFHasta]  = useState('');
+
+  // Vista previa email
+  const [emailModal,    setEmailModal]    = useState(null); // { pedidoId, bodegaEmail, lineas, descPct, ivaPct, pedido }
+  const [emailObs,      setEmailObs]      = useState('');
+  const [emailSending,  setEmailSending]  = useState(false);
 
   const FORM_EMPTY = { fecha: new Date().toISOString().split('T')[0], serie_id: '', entidad_id: '', bodega_entidad_id: '', porcentaje_iva: 21, descuento_pct: 0, observaciones: '' };
   const [form,   setForm]   = useState(FORM_EMPTY);
@@ -137,11 +147,31 @@ export default function Pedidos() {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  const enviarEmail = async (id, email) => {
+  const abrirVistaPrevia = (pedido, lineas, descPct, ivaPct) => {
+    setEmailObs('');
+    setEmailModal({ pedido, lineas, descPct, ivaPct });
+  };
+
+  const confirmarEnvioEmail = async () => {
+    if (!emailModal) return;
+    setEmailSending(true);
     try {
-      await api.post(`/email/pedido/${id}`, { email });
-      toast('Email enviado', 'success');
+      await api.post(`/email/pedido/${emailModal.pedido.id}`, {
+        email: emailModal.pedido.bodega_email,
+        observaciones: emailObs,
+      });
+      // Cambiar estado a enviado
+      await api.put(`/pedidos/${emailModal.pedido.id}/estado`, { estado: 'enviado' });
+      toast('Email enviado y pedido marcado como Enviado', 'success');
+      setEmailModal(null);
+      cargar();
+      // Actualizar pedidoSel si está abierto
+      if (pedidoSel?.id === emailModal.pedido.id) {
+        const { data } = await api.get(`/pedidos/${emailModal.pedido.id}`);
+        setPedidoSel(data);
+      }
     } catch (e) { toast(e.message, 'error'); }
+    finally { setEmailSending(false); }
   };
 
   const imprimirPedido = async (pedido, lineas, descPct, ivaPct) => {
@@ -363,8 +393,8 @@ ${pedido.observaciones ? `
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--surface-raised)', borderBottom: '1px solid var(--border)' }}>
-                {['Fecha', 'Número', 'Cliente', 'Bodega', 'Total', 'Estado', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
+                {['Fecha', 'Número', 'Cliente', 'Bodega', 'Importe sin IVA', 'Total', 'Comisiones', 'Estado', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: ['Importe sin IVA','Total','Comisiones'].includes(h) ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -376,7 +406,9 @@ ${pedido.observaciones ? `
                   <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontWeight: 600 }}>{p.serie_prefijo}{p.numero}</td>
                   <td style={{ padding: '10px 14px' }}>{p.entidad_nombre}</td>
                   <td style={{ padding: '10px 14px' }}>{p.bodega_nombre}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right' }}><Money value={p.base_imponible} /></td>
                   <td style={{ padding: '10px 14px', textAlign: 'right' }}><Money value={p.total} /></td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--accent)' }}><Money value={p.total_comisiones} /></td>
                   <td style={{ padding: '10px 14px' }}><EstadoBadge estado={p.estado} /></td>
                   <td style={{ padding: '10px 14px' }} onClick={e => e.stopPropagation()}>
                     <button className="btn btn-secondary btn-sm" onClick={() => abrirDetalle(p.id)}>Ver</button>
@@ -549,12 +581,94 @@ ${pedido.observaciones ? `
       )}
 
       {/* ── Modal Detalle ──────────────────────────────────── */}
+      {/* ── Modal Vista Previa Email ──────────────────────────── */}
+      {emailModal && (() => {
+        const { pedido, lineas: eLineas, descPct: eDsc, ivaPct: eIva } = emailModal;
+        const fmt = (n) => parseFloat(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fechaStr = pedido.fecha ? new Date(pedido.fecha).toLocaleDateString('es-ES') : '';
+        const numeroPedido = `${pedido.serie_prefijo || ''}${pedido.numero}`;
+        const baseTotal = eLineas.reduce((s, l) => s + baseLinea(l), 0);
+        const baseDescT = eLineas.reduce((s, l) => s + baseDescLinea(l, eDsc), 0);
+        const ivaEuros  = baseDescT * eIva / 100;
+        const totalFinal = baseDescT + ivaEuros;
+
+        return (
+          <Modal title="Vista previa del email" onClose={() => setEmailModal(null)}
+            style={{ maxWidth: 720, width: '95vw' }}>
+
+            {/* Preview del email */}
+            <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20, marginBottom: 16, background: '#fff', color: '#222', fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
+              <p style={{ marginBottom: 12 }}>
+                Adjunto remitimos N/pedido nº <strong>{numeroPedido}</strong> de fecha <strong>{fechaStr}</strong> correspondiente al cliente <strong>{pedido.entidad_nombre}</strong>, con el siguiente detalle:
+              </p>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #333' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left' }}>Producto</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Cajas</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Botellas</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Precio/bot.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>% Dto.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eLineas.map((l, i) => {
+                    const cajas   = parseFloat(l.cantidad_cajas) || 0;
+                    const cajasP  = parseFloat(l.cajas_promo)    || 0;
+                    const bpc     = parseFloat(l.botellas_por_caja) || 0;
+                    const pbot    = parseFloat(l.precio_botella) || 0;
+                    const botellas = (cajas + cajasP) * bpc;
+                    const baseLD  = baseDescLinea(l, eDsc);
+                    const dtoLinea = parseFloat(l.descuento_linea_pct ?? eDsc) || 0;
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #e8e8e8' }}>
+                        <td style={{ padding: '5px 8px' }}>{l.ref_nombre}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{cajasP > 0 ? `${cajas}+${cajasP}` : cajas}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{botellas}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{fmt(pbot)}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{dtoLinea > 0 ? `${dtoLinea}%` : '—'}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}><b>{fmt(baseLD)}</b></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Observaciones preview */}
+              {emailObs && (
+                <p style={{ marginBottom: 12, whiteSpace: 'pre-wrap', borderLeft: '3px solid #ddd', paddingLeft: 10, color: '#444' }}>{emailObs}</p>
+              )}
+
+              <p style={{ marginBottom: 8 }}>Un cordial saludo.</p>
+            </div>
+
+            {/* Campo observaciones */}
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Observaciones (se añaden antes del saludo)</label>
+              <textarea className="input" rows={4} style={{ width: '100%', resize: 'vertical' }}
+                placeholder="Escribe aquí cualquier comentario adicional para este email..."
+                value={emailObs} onChange={e => setEmailObs(e.target.value)} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setEmailModal(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={confirmarEnvioEmail} disabled={emailSending}>
+                {emailSending ? 'Enviando…' : '📧 Enviar email'}
+              </button>
+            </div>
+          </Modal>
+        );
+      })()}
+
       {modal === 'detalle' && pedidoSel && (() => {
         const descPct  = parseFloat(detForm.descuento_pct) || 0;
         const ivaPct   = parseFloat(detForm.porcentaje_iva) || 21;
         const baseTotal = detLineas.reduce((s, l) => s + baseLinea(l), 0);
-        const descEuros = baseTotal * descPct / 100;
-        const baseDesc  = baseTotal - descEuros;
+        const baseDescTotal = detLineas.reduce((s, l) => s + baseDescLinea(l, descPct), 0);
+        const descEuros = baseTotal - baseDescTotal;
+        const baseDesc  = baseDescTotal;
         const iva       = baseDesc * ivaPct / 100;
         const total     = baseDesc + iva;
         const totalCom  = detLineas.reduce((s, l) => s + comisionLinea(l, descPct), 0);
@@ -579,12 +693,14 @@ ${pedido.observaciones ? `
           setSaving(true);
           try {
             const lineasSaneadas = detLineas.map(l => ({
-              referencia_id:    l.referencia_id,
-              cantidad_cajas:   parseFloat(l.cantidad_cajas)    || 0,
-              cajas_promo:      parseFloat(l.cajas_promo)       || 0,
-              botellas_por_caja:parseFloat(l.botellas_por_caja) || 0,
-              precio_botella:   parseFloat(l.precio_botella)    || 0,
-              comision_pct:     parseFloat(l.comision_pct)      || 0,
+              referencia_id:       l.referencia_id,
+              cantidad_cajas:      parseFloat(l.cantidad_cajas)       || 0,
+              cajas_promo:         parseFloat(l.cajas_promo)          || 0,
+              botellas_por_caja:   parseFloat(l.botellas_por_caja)    || 0,
+              precio_botella:      parseFloat(l.precio_botella)       || 0,
+              comision_pct:        parseFloat(l.comision_pct)         || 0,
+              descuento_linea_pct: l.descuento_linea_pct !== undefined && l.descuento_linea_pct !== ''
+                                     ? parseFloat(l.descuento_linea_pct) : null,
             }));
             await api.put(`/pedidos/${pedidoSel.id}`, {
               descuento_pct: descPct,
@@ -616,11 +732,13 @@ ${pedido.observaciones ? `
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
                   <colgroup>
                     <col style={{ width: 'auto' }} />
+                    <col style={{ width: 70 }} />
+                    <col style={{ width: 70 }} />
                     <col style={{ width: 80 }} />
-                    <col style={{ width: 80 }} />
-                    <col style={{ width: 90 }} />
-                    <col style={{ width: 90 }} />
-                    <col style={{ width: 80 }} />
+                    <col style={{ width: 85 }} />
+                    <col style={{ width: 75 }} />
+                    <col style={{ width: 95 }} />
+                    <col style={{ width: 75 }} />
                     <col style={{ width: 90 }} />
                     <col style={{ width: 40 }} />
                   </colgroup>
@@ -632,6 +750,8 @@ ${pedido.observaciones ? `
                         { h: 'Bot/caja', align: 'right' },
                         { h: '€/bot', align: 'right' },
                         { h: 'Base', align: 'right' },
+                        { h: 'Dto. %', align: 'right' },
+                        { h: 'Base c/dto', align: 'right' },
                         { h: '% Com.', align: 'right' },
                         { h: 'Imp. Com.', align: 'right' },
                         { h: '', align: 'center' },
@@ -642,8 +762,10 @@ ${pedido.observaciones ? `
                   </thead>
                   <tbody>
                     {detLineas.map((l, i) => {
-                      const base = baseLinea(l);
-                      const com  = comisionLinea(l, descPct);
+                      const base    = baseLinea(l);
+                      const baseD   = baseDescLinea(l, descPct);
+                      const com     = comisionLinea(l, descPct);
+                      const dtoLinea = l.descuento_linea_pct ?? '';
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={td()}>
@@ -666,6 +788,10 @@ ${pedido.observaciones ? `
                             <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
                           </td>
                           <td style={td({ textAlign: 'right', fontWeight: 500 })}>{base.toFixed(2)} €</td>
+                          <td style={td({ textAlign: 'right' })}>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} placeholder={descPct > 0 ? descPct : '0'} value={dtoLinea} onChange={e => setDetLinea(i,'descuento_linea_pct', e.target.value === '' ? undefined : e.target.value)} />
+                          </td>
+                          <td style={td({ textAlign: 'right', fontWeight: 500, color: baseD < base ? '#e53' : 'inherit' })}>{baseD.toFixed(2)} €</td>
                           <td style={td({ textAlign: 'right' })}>
                             <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
                           </td>
@@ -722,8 +848,8 @@ ${pedido.observaciones ? `
               <button className="btn btn-secondary" onClick={() => imprimirPedido(pedidoSel, detLineas, descPct, ivaPct)}>
                 🖨️ Imprimir
               </button>
-              <button className="btn btn-secondary" onClick={() => enviarEmail(pedidoSel.id, pedidoSel.bodega_email)}>
-                📧 Enviar email
+              <button className="btn btn-secondary" onClick={() => abrirVistaPrevia(pedidoSel, detLineas, descPct, ivaPct)}>
+                📧 Vista previa del email
               </button>
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cerrar</button>
             </div>
