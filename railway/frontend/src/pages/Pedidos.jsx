@@ -601,7 +601,7 @@ ${pedido.observaciones ? `
 
         return (
           <Modal title="Vista previa del email" onClose={() => setEmailModal(null)}
-            style={{ maxWidth: 720, width: '95vw' }}>
+            style={{ maxWidth: 720, width: '95vw' }} zIndex={1100}>
 
             {/* Preview del email */}
             <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20, marginBottom: 16, background: '#fff', color: '#222', fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
