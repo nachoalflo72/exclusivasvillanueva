@@ -142,15 +142,17 @@ router.put('/:id', async (req, res) => {
     await client.query('BEGIN');
     const { descuento_pct, porcentaje_iva, lineas } = req.body;
 
-    // Recalcular totales usando descuento por línea si existe, sino el del pedido
+    // Recalcular totales:
+    // Se aplican AMBOS descuentos acumulados: base * (1 - dto_linea/100) * (1 - dto_pedido/100)
+    // Si la línea no tiene dto propio, su dto de línea es 0 (no hereda el del pedido)
     const dPct   = parseFloat(descuento_pct) || 0;
     const ivaPct = parseFloat(porcentaje_iva) || 21;
     let baseDesc = 0;
     for (const l of lineas) {
       const base     = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
       const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
-                       ? parseFloat(l.descuento_linea_pct) : dPct;
-      baseDesc += base * (1 - dtoLinea / 100);
+                       ? parseFloat(l.descuento_linea_pct) : 0;
+      baseDesc += base * (1 - dtoLinea / 100) * (1 - dPct / 100);
     }
     const iva   = baseDesc * ivaPct / 100;
     const total = baseDesc + iva;
@@ -171,12 +173,12 @@ router.put('/:id', async (req, res) => {
       const bpc       = parseFloat(l.botellas_por_caja) || 0;
       const pbot      = parseFloat(l.precio_botella)    || 0;
       const comPct    = parseFloat(l.comision_pct)      || 0;
-      // Descuento por línea: usa el específico de la línea, si no el del pedido
+      // Descuento acumulado: dto de línea (0 si no tiene) + dto del pedido
       const dtoLinea  = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
-                        ? parseFloat(l.descuento_linea_pct) : dPct;
+                        ? parseFloat(l.descuento_linea_pct) : 0;
       const precioCaja    = pbot * bpc;
       const base          = cajas * precioCaja;
-      const baseLineaDesc = base * (1 - dtoLinea / 100);
+      const baseLineaDesc = base * (1 - dtoLinea / 100) * (1 - dPct / 100);
       const importeCom    = baseLineaDesc * comPct / 100;
       totalComisiones    += importeCom;
       const dtoLineaVal   = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
