@@ -2,6 +2,9 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 const multer  = require('multer');
+
+// Migración segura: columna descuento por línea
+db.query(`ALTER TABLE lineas_pedido ADD COLUMN IF NOT EXISTS descuento_linea_pct NUMERIC`).catch(() => {});
 const path    = require('path');
 
 const storage = multer.diskStorage({
@@ -139,17 +142,18 @@ router.put('/:id', async (req, res) => {
     await client.query('BEGIN');
     const { descuento_pct, porcentaje_iva, lineas } = req.body;
 
-    // Recalcular totales
-    let baseTotal = 0;
+    // Recalcular totales usando descuento por línea si existe, sino el del pedido
+    const dPct   = parseFloat(descuento_pct) || 0;
+    const ivaPct = parseFloat(porcentaje_iva) || 21;
+    let baseDesc = 0;
     for (const l of lineas) {
-      const base = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
-      baseTotal += base;
+      const base     = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                       ? parseFloat(l.descuento_linea_pct) : dPct;
+      baseDesc += base * (1 - dtoLinea / 100);
     }
-    const dPct      = parseFloat(descuento_pct) || 0;
-    const ivaPct    = parseFloat(porcentaje_iva) || 21;
-    const baseDesc  = baseTotal * (1 - dPct / 100);
-    const iva       = baseDesc * ivaPct / 100;
-    const total     = baseDesc + iva;
+    const iva   = baseDesc * ivaPct / 100;
+    const total = baseDesc + iva;
 
     const { rows } = await client.query(
       `UPDATE pedidos SET descuento_pct=$1, porcentaje_iva=$2,
@@ -167,16 +171,21 @@ router.put('/:id', async (req, res) => {
       const bpc       = parseFloat(l.botellas_por_caja) || 0;
       const pbot      = parseFloat(l.precio_botella)    || 0;
       const comPct    = parseFloat(l.comision_pct)      || 0;
+      // Descuento por línea: usa el específico de la línea, si no el del pedido
+      const dtoLinea  = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                        ? parseFloat(l.descuento_linea_pct) : dPct;
       const precioCaja    = pbot * bpc;
       const base          = cajas * precioCaja;
-      const baseLineaDesc = base * (1 - dPct / 100);
+      const baseLineaDesc = base * (1 - dtoLinea / 100);
       const importeCom    = baseLineaDesc * comPct / 100;
       totalComisiones    += importeCom;
+      const dtoLineaVal   = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                            ? parseFloat(l.descuento_linea_pct) : null;
       await client.query(
-        `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, precio_caja, base_imponible, comision_pct, importe_comision)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        `INSERT INTO lineas_pedido (pedido_id, referencia_id, cantidad_cajas, cajas_promo, botellas_por_caja, precio_botella, precio_caja, base_imponible, comision_pct, importe_comision, descuento_linea_pct)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [req.params.id, l.referencia_id, cajas, l.cajas_promo||0, bpc, pbot,
-         precioCaja.toFixed(2), baseLineaDesc.toFixed(2), comPct, importeCom.toFixed(2)]
+         precioCaja.toFixed(2), baseLineaDesc.toFixed(2), comPct, importeCom.toFixed(2), dtoLineaVal]
       );
     }
 
