@@ -248,6 +248,7 @@ router.post('/pedido/:id', async (req, res) => {
 
     const destinatario = req.body.email || p.bodega_email;
     if (!destinatario) return res.status(400).json({ error: 'Sin email destinatario' });
+    const observaciones = req.body.observaciones || '';
 
     // Calcular totales para el email
     const dPct   = parseFloat(p.descuento_pct) || 0;
@@ -267,25 +268,26 @@ router.post('/pedido/:id', async (req, res) => {
       const pbot    = parseFloat(l.precio_botella) || 0;
       const botellas = (cajas + cajasP) * bpc;
       const baseL   = cajas * bpc * pbot;
-      const baseLD  = baseL * (1 - dPct / 100);
+      // Descuento: usa el de línea si existe, si no el del pedido
+      const dtoLinea = l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined
+        ? parseFloat(l.descuento_linea_pct) : dPct;
+      const baseLD  = baseL * (1 - dtoLinea / 100);
       return `
         <tr>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;white-space:nowrap">${l.ref_nombre}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${cajasP > 0 ? cajas + '+' + cajasP : cajas}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${botellas}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${fmt(pbot)}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${dtoLinea > 0 ? dtoLinea + '%' : '—'}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap"><b>${fmt(baseLD)}</b></td>
         </tr>`;
     }).join('');
 
-    const baseTotal = lineas.reduce((s, l) => {
-      return s + (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
-    }, 0);
-    const baseDesc = baseTotal * (1 - dPct / 100);
-    const ivaEuros = baseDesc * ivaPct / 100;
-    const totalFinal = baseDesc + ivaEuros;
-
     // ── HTML del email ────────────────────────────────────────
+    const obsHTML = observaciones
+      ? `<p style="margin-bottom:16px;white-space:pre-wrap">${observaciones}</p>`
+      : '';
+
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"></head>
@@ -304,12 +306,14 @@ router.post('/pedido/:id', async (req, res) => {
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Cajas</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Botellas</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio/bot.</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">% Dto.</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Importe</th>
       </tr>
     </thead>
     <tbody>${lineasHTML}</tbody>
   </table>
 
+  ${obsHTML}
   <p style="margin-bottom:24px">Un cordial saludo.</p>
 
   <p style="margin-bottom:4px"><strong>${comercialNombre}</strong></p>
