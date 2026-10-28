@@ -12,11 +12,16 @@ const baseLinea = (l) => {
   return cajas * bpc * pbot;
 };
 
-// Calcula base con descuento de una línea (usa descuento de línea si existe, si no el del pedido)
+// Calcula base con descuento de una línea:
+// Se aplican AMBOS descuentos de forma acumulada:
+//   base * (1 - dto_linea/100) * (1 - dto_pedido/100)
+// Si la línea no tiene dto propio (null/undefined), su dto es 0 (no hereda el del pedido)
 const baseDescLinea = (l, descuentoPedidoPct) => {
-  const base = baseLinea(l);
-  const dPct = parseFloat(l.descuento_linea_pct ?? descuentoPedidoPct) || 0;
-  return base * (1 - dPct / 100);
+  const base      = baseLinea(l);
+  const dLinea    = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined && l.descuento_linea_pct !== '')
+                    ? parseFloat(l.descuento_linea_pct) : 0;
+  const dPedido   = parseFloat(descuentoPedidoPct) || 0;
+  return base * (1 - dLinea / 100) * (1 - dPedido / 100);
 };
 
 // Calcula importe comisión de una línea
@@ -180,9 +185,8 @@ export default function Pedidos() {
     try { const { data } = await api.get('/configuracion'); cfg = data || {}; } catch {}
 
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const baseTotal = lineas.reduce((s, l) => s + baseLinea(l), 0);
-    const descEuros = baseTotal * descPct / 100;
-    const baseDesc  = baseTotal - descEuros;
+    // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
+    const baseDesc  = lineas.reduce((s, l) => s + baseDescLinea(l, descPct), 0);
     const ivaEuros  = baseDesc * ivaPct / 100;
     const total     = baseDesc + ivaEuros;
 
@@ -193,8 +197,11 @@ export default function Pedidos() {
       const pbot  = parseFloat(l.precio_botella) || 0;
       const uds   = cajas * bpc;
       const base  = baseLinea(l);
-      const baseD = base * (1 - descPct / 100);
+      const baseD = baseDescLinea(l, descPct);
       const precioNeto = uds > 0 ? baseD / uds : 0;
+      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined && l.descuento_linea_pct !== '')
+                       ? parseFloat(l.descuento_linea_pct) : 0;
+      const dtoMostrar = dtoLinea > 0 ? dtoLinea : descPct;
       const nombre = l.ref_nombre || l.nombre || '';
       const codigo = l.ref_codigo || l.codigo || '';
       return `
@@ -204,7 +211,7 @@ export default function Pedidos() {
           <td style="text-align:right">${cajas}${cajasPromo > 0 ? '+' + cajasPromo : ''}</td>
           <td style="text-align:right">${uds}</td>
           <td style="text-align:right">${fmt(pbot)}</td>
-          <td style="text-align:right">${descPct > 0 ? descPct + '%' : ''}</td>
+          <td style="text-align:right">${dtoMostrar > 0 ? dtoMostrar + '%' : ''}</td>
           <td style="text-align:right">${fmt(precioNeto)}</td>
           <td style="text-align:right">${fmt(baseD)}</td>
           <td style="text-align:center">G</td>
