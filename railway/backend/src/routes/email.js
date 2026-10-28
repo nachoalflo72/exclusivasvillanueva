@@ -18,10 +18,13 @@ function generarPDFPedido(p, lineas, cfg) {
 
     const dPct    = parseFloat(p.descuento_pct) || 0;
     const ivaPct  = parseFloat(p.porcentaje_iva) || 21;
-    const baseTotal = lineas.reduce((s, l) => {
-      return s + (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+    // Descuentos acumulados línea a línea
+    const baseDesc = lineas.reduce((s, l) => {
+      const base     = (parseFloat(l.cantidad_cajas)||0) * (parseFloat(l.botellas_por_caja)||0) * (parseFloat(l.precio_botella)||0);
+      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                       ? parseFloat(l.descuento_linea_pct) : 0;
+      return s + base * (1 - dtoLinea / 100) * (1 - dPct / 100);
     }, 0);
-    const baseDesc = baseTotal * (1 - dPct / 100);
     const ivaEuros = baseDesc * ivaPct / 100;
     const total    = baseDesc + ivaEuros;
 
@@ -110,7 +113,11 @@ function generarPDFPedido(p, lineas, cfg) {
       const pbot     = parseFloat(l.precio_botella) || 0;
       const uds      = cajas * bpc;
       const baseL    = cajas * bpc * pbot;
-      const baseLD   = baseL * (1 - dPct / 100);
+      // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
+      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+                       ? parseFloat(l.descuento_linea_pct) : 0;
+      const baseLD   = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      const dtoMostrar = dtoLinea > 0 ? dtoLinea : dPct;
       const pneto    = uds > 0 ? baseLD / uds : 0;
       const cajasStr = cajasP > 0 ? `${cajas}+${cajasP}` : `${cajas}`;
 
@@ -119,7 +126,7 @@ function generarPDFPedido(p, lineas, cfg) {
       doc.text(cajasStr,       cols[2].x, y, { width: cols[2].w, align: 'right' });
       doc.text(String(uds),    cols[3].x, y, { width: cols[3].w, align: 'right' });
       doc.text(fmt(pbot),      cols[4].x, y, { width: cols[4].w, align: 'right' });
-      doc.text(dPct > 0 ? `${dPct}%` : '', cols[5].x, y, { width: cols[5].w, align: 'right' });
+      doc.text(dtoMostrar > 0 ? `${dtoMostrar}%` : '', cols[5].x, y, { width: cols[5].w, align: 'right' });
       doc.text(fmt(pneto),     cols[6].x, y, { width: cols[6].w, align: 'right' });
       doc.text(fmt(baseLD),    cols[7].x, y, { width: cols[7].w, align: 'right' });
       doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.3).strokeColor('#ccc').stroke();
@@ -262,23 +269,25 @@ router.post('/pedido/:id', async (req, res) => {
 
     // ── Filas de la tabla del email ───────────────────────────
     const lineasHTML = lineas.map(l => {
-      const cajas   = parseFloat(l.cantidad_cajas) || 0;
-      const cajasP  = parseFloat(l.cajas_promo)    || 0;
-      const bpc     = parseFloat(l.botellas_por_caja) || 0;
-      const pbot    = parseFloat(l.precio_botella) || 0;
+      const cajas    = parseFloat(l.cantidad_cajas) || 0;
+      const cajasP   = parseFloat(l.cajas_promo)    || 0;
+      const bpc      = parseFloat(l.botellas_por_caja) || 0;
+      const pbot     = parseFloat(l.precio_botella) || 0;
       const botellas = (cajas + cajasP) * bpc;
-      const baseL   = cajas * bpc * pbot;
-      // Descuento: usa el de línea si existe, si no el del pedido
-      const dtoLinea = l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined
-        ? parseFloat(l.descuento_linea_pct) : dPct;
-      const baseLD  = baseL * (1 - dtoLinea / 100);
+      const baseL    = cajas * bpc * pbot;
+      // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
+      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+        ? parseFloat(l.descuento_linea_pct) : 0;
+      const baseLD   = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      // En la columna % Dto. mostramos el descuento de línea (si lo hay), o el de pedido (si lo hay)
+      const dtoMostrar = dtoLinea > 0 ? dtoLinea : (dPct > 0 ? dPct : 0);
       return `
         <tr>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;white-space:nowrap">${l.ref_nombre}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${cajasP > 0 ? cajas + '+' + cajasP : cajas}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${botellas}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${fmt(pbot)}</td>
-          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${dtoLinea > 0 ? dtoLinea + '%' : '—'}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${dtoMostrar > 0 ? dtoMostrar + '%' : '—'}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap"><b>${fmt(baseLD)}</b></td>
         </tr>`;
     }).join('');
