@@ -87,14 +87,15 @@ function generarPDFPedido(p, lineas, cfg) {
     doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.5).stroke();
     y += 14;
 
-    // Cabecera columnas — mismas que el email: Producto, Cajas, Botellas, Precio/bot., % Dto., Importe
+    // Cabecera columnas: Producto, Cajas, Botellas, Precio/bot., % Dto., Precio neto, Importe
     const cols = [
-      { label: 'Producto',    x: LEFT,       w: 230, align: 'left'  },
-      { label: 'Cajas',       x: LEFT + 233, w: 45,  align: 'right' },
-      { label: 'Botellas',    x: LEFT + 281, w: 50,  align: 'right' },
-      { label: 'Precio/bot.', x: LEFT + 334, w: 55,  align: 'right' },
-      { label: '% Dto.',      x: LEFT + 392, w: 40,  align: 'right' },
-      { label: 'Importe',     x: LEFT + 435, w: 80,  align: 'right' },
+      { label: 'Producto',     x: LEFT,       w: 175, align: 'left'  },
+      { label: 'Cajas',        x: LEFT + 178, w: 35,  align: 'right' },
+      { label: 'Botellas',     x: LEFT + 216, w: 42,  align: 'right' },
+      { label: 'Precio/bot.',  x: LEFT + 261, w: 50,  align: 'right' },
+      { label: '% Dto.',       x: LEFT + 314, w: 38,  align: 'right' },
+      { label: 'Precio neto',  x: LEFT + 355, w: 55,  align: 'right' },
+      { label: 'Importe',      x: LEFT + 413, w: 82,  align: 'right' },
     ];
 
     doc.fontSize(8).font('Helvetica-Bold');
@@ -115,6 +116,7 @@ function generarPDFPedido(p, lineas, cfg) {
       const dtoLinea   = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
                          ? parseFloat(l.descuento_linea_pct) : 0;
       const baseLD     = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      const precioNeto = pbot * (1 - dtoLinea / 100) * (1 - dPct / 100);
       const dtoMostrar = dtoLinea > 0 ? dtoLinea : dPct;
       const cajasStr   = cajasP > 0 ? `${cajas}+${cajasP}` : `${cajas}`;
       const nombre     = l.ref_nombre || '';
@@ -134,7 +136,8 @@ function generarPDFPedido(p, lineas, cfg) {
       doc.text(String(botellas), cols[2].x, y, { width: cols[2].w, align: 'right', lineBreak: false });
       doc.text(fmt(pbot),     cols[3].x, y, { width: cols[3].w, align: 'right', lineBreak: false });
       doc.text(dtoMostrar > 0 ? `${dtoMostrar}%` : '—', cols[4].x, y, { width: cols[4].w, align: 'right', lineBreak: false });
-      doc.text(fmt(baseLD),   cols[5].x, y, { width: cols[5].w, align: 'right', lineBreak: false });
+      doc.text(fmt(precioNeto), cols[5].x, y, { width: cols[5].w, align: 'right', lineBreak: false });
+      doc.text(fmt(baseLD),   cols[6].x, y, { width: cols[6].w, align: 'right', lineBreak: false });
       doc.moveTo(LEFT, y + 11).lineTo(LEFT + W, y + 11).lineWidth(0.3).strokeColor('#ccc').stroke();
       doc.strokeColor('#000');
       y += 14;
@@ -279,9 +282,10 @@ router.post('/pedido/:id', async (req, res) => {
       const botellas = (cajas + cajasP) * bpc;
       const baseL    = cajas * bpc * pbot;
       // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
-      const dtoLinea = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
+      const dtoLinea   = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined)
         ? parseFloat(l.descuento_linea_pct) : 0;
-      const baseLD   = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      const baseLD     = baseL * (1 - dtoLinea / 100) * (1 - dPct / 100);
+      const precioNeto = pbot * (1 - dtoLinea / 100) * (1 - dPct / 100);
       // En la columna % Dto. mostramos el descuento de línea (si lo hay), o el de pedido (si lo hay)
       const dtoMostrar = dtoLinea > 0 ? dtoLinea : (dPct > 0 ? dPct : 0);
       return `
@@ -291,6 +295,7 @@ router.post('/pedido/:id', async (req, res) => {
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${botellas}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${fmt(pbot)}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${dtoMostrar > 0 ? dtoMostrar + '%' : '—'}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap">${fmt(precioNeto)}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e8e8e8;text-align:right;white-space:nowrap"><b>${fmt(baseLD)}</b></td>
         </tr>`;
     }).join('');
@@ -319,6 +324,7 @@ router.post('/pedido/:id', async (req, res) => {
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Botellas</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio/bot.</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">% Dto.</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio neto</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Importe</th>
       </tr>
     </thead>
