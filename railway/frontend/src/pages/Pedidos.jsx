@@ -617,6 +617,7 @@ ${pedido.observaciones ? `
                     <th style={{ padding: '6px 8px', textAlign: 'right' }}>Botellas</th>
                     <th style={{ padding: '6px 8px', textAlign: 'right' }}>Precio/bot.</th>
                     <th style={{ padding: '6px 8px', textAlign: 'right' }}>% Dto.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Precio neto</th>
                     <th style={{ padding: '6px 8px', textAlign: 'right' }}>Importe</th>
                   </tr>
                 </thead>
@@ -628,14 +629,19 @@ ${pedido.observaciones ? `
                     const pbot    = parseFloat(l.precio_botella) || 0;
                     const botellas = (cajas + cajasP) * bpc;
                     const baseLD  = baseDescLinea(l, eDsc);
-                    const dtoLinea = parseFloat(l.descuento_linea_pct ?? eDsc) || 0;
+                    const dtoLinea  = (l.descuento_linea_pct !== null && l.descuento_linea_pct !== undefined && l.descuento_linea_pct !== '')
+                                      ? parseFloat(l.descuento_linea_pct) : 0;
+                    const dPedido   = parseFloat(eDsc) || 0;
+                    const precioNeto = pbot * (1 - dtoLinea / 100) * (1 - dPedido / 100);
+                    const dtoMostrar = dtoLinea > 0 ? dtoLinea : dPedido;
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #e8e8e8' }}>
                         <td style={{ padding: '5px 8px' }}>{l.ref_nombre}</td>
                         <td style={{ padding: '5px 8px', textAlign: 'right' }}>{cajasP > 0 ? `${cajas}+${cajasP}` : cajas}</td>
                         <td style={{ padding: '5px 8px', textAlign: 'right' }}>{botellas}</td>
                         <td style={{ padding: '5px 8px', textAlign: 'right' }}>{fmt(pbot)}</td>
-                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{dtoLinea > 0 ? `${dtoLinea}%` : '—'}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{dtoMostrar > 0 ? `${dtoMostrar}%` : '—'}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right' }}>{fmt(precioNeto)}</td>
                         <td style={{ padding: '5px 8px', textAlign: 'right' }}><b>{fmt(baseLD)}</b></td>
                       </tr>
                     );
