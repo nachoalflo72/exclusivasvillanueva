@@ -328,8 +328,7 @@ ${pedido.observaciones ? `
       <th style="text-align:right">Base Imponible</th>
       <th style="text-align:right">% IVA</th>
       <th style="text-align:right">Cuota IVA</th>
-      <th style="text-align:right">% R. E.</th>
-      <th style="text-align:right">Cuota R. E.</th>
+      <th style="text-align:right">% Dto.</th>
       <th style="text-align:right">Total</th>
     </tr>
   </thead>
@@ -338,8 +337,7 @@ ${pedido.observaciones ? `
       <td style="text-align:right">${fmt(baseDesc)}</td>
       <td style="text-align:right">${ivaPct},00</td>
       <td style="text-align:right">${fmt(ivaEuros)}</td>
-      <td style="text-align:right"></td>
-      <td style="text-align:right"></td>
+      <td style="text-align:right">${descPct > 0 ? descPct + '%' : '—'}</td>
       <td style="text-align:right">${fmt(total)}</td>
     </tr>
   </tbody>
@@ -492,7 +490,7 @@ ${pedido.observaciones ? `
                       { h: 'Imp. Com.', align: 'right' },
                       { h: '', align: 'center' },
                     ].map(({ h, align }) => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
