@@ -376,7 +376,7 @@ ${pedido.observaciones ? `
   };
 
   // Estilo celda tabla
-  const td = (extra = {}) => ({ padding: '8px 10px', ...extra });
+  const td = (extra = {}) => ({ padding: '8px 10px', fontSize: 12, ...extra });
 
   return (
     <div>
@@ -612,13 +612,13 @@ ${pedido.observaciones ? `
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #333' }}>
-                    <th style={{ padding: '6px 8px', textAlign: 'left' }}>Producto</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Cajas</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Botellas</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Precio/bot.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>% Dto.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Precio neto</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Importe</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', whiteSpace: 'nowrap' }}>Producto</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>Cajas</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>Botellas</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>Precio/bot.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>% Dto.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>Precio neto/bot.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>Importe</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -769,7 +769,7 @@ ${pedido.observaciones ? `
                         { h: 'Imp. Com.', align: 'right' },
                         { h: '', align: 'center' },
                       ].map(({ h, align }) => (
-                        <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden' }}>{h}</th>
+                        <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
