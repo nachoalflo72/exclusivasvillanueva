@@ -777,7 +777,7 @@ ${pedido.observaciones ? `
                       const baseD   = baseDescLinea(l, descPct);
                       const com     = comisionLinea(l, descPct);
                       const dtoLinea = l.descuento_linea_pct ?? '';
-                      const inp = { width: '100%', textAlign: 'right', fontSize: 12 };
+                      const inp = { width: '100%', textAlign: 'right', fontSize: 12, padding: '4px 2px' };
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '6px 6px', fontSize: 12 }}>
