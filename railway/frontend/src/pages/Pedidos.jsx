@@ -740,18 +740,18 @@ ${pedido.observaciones ? `
                 <button className="btn btn-secondary btn-sm" onClick={agregarDetLinea}>+ Añadir línea</button>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
                   <colgroup>
                     <col style={{ width: 'auto' }} />
-                    <col style={{ width: 70 }} />
-                    <col style={{ width: 70 }} />
+                    <col style={{ width: 65 }} />
+                    <col style={{ width: 65 }} />
+                    <col style={{ width: 75 }} />
                     <col style={{ width: 80 }} />
-                    <col style={{ width: 85 }} />
-                    <col style={{ width: 75 }} />
-                    <col style={{ width: 95 }} />
-                    <col style={{ width: 75 }} />
+                    <col style={{ width: 65 }} />
                     <col style={{ width: 90 }} />
-                    <col style={{ width: 40 }} />
+                    <col style={{ width: 70 }} />
+                    <col style={{ width: 85 }} />
+                    <col style={{ width: 36 }} />
                   </colgroup>
                   <thead>
                     <tr style={{ background: 'var(--surface-raised)' }}>
@@ -767,7 +767,7 @@ ${pedido.observaciones ? `
                         { h: 'Imp. Com.', align: 'right' },
                         { h: '', align: 'center' },
                       ].map(({ h, align }) => (
-                        <th key={h} style={{ padding: '8px 10px', textAlign: align, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '8px 6px', textAlign: align, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -777,37 +777,38 @@ ${pedido.observaciones ? `
                       const baseD   = baseDescLinea(l, descPct);
                       const com     = comisionLinea(l, descPct);
                       const dtoLinea = l.descuento_linea_pct ?? '';
+                      const inp = { width: '100%', textAlign: 'right', fontSize: 12 };
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={td()}>
+                          <td style={{ padding: '6px 6px', fontSize: 12 }}>
                             {l.ref_nombre ? (
                               <span style={{ fontWeight: 500 }}>{l.ref_codigo} — {l.ref_nombre}</span>
                             ) : (
-                              <select className="input" style={{ minWidth: 200 }} value={l.referencia_id || ''} onChange={e => onDetRefChange(i, e.target.value)}>
+                              <select className="input" style={{ minWidth: 180, fontSize: 12 }} value={l.referencia_id || ''} onChange={e => onDetRefChange(i, e.target.value)}>
                                 <option value="">— Selecciona —</option>
                                 {referencias.map(r => <option key={r.id} value={r.id}>{r.codigo} — {r.nombre}</option>)}
                               </select>
                             )}
                           </td>
-                          <td style={td({ textAlign: 'right' })}>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.cantidad_cajas} onChange={e => setDetLinea(i,'cantidad_cajas',e.target.value)} />
+                          <td style={{ padding: '6px 6px', textAlign: 'right' }}>
+                            <input type="number" className="input" style={inp} value={l.cantidad_cajas} onChange={e => setDetLinea(i,'cantidad_cajas',e.target.value)} />
                           </td>
-                          <td style={td({ textAlign: 'right' })}>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.botellas_por_caja} onChange={e => setDetLinea(i,'botellas_por_caja',e.target.value)} />
+                          <td style={{ padding: '6px 6px', textAlign: 'right' }}>
+                            <input type="number" className="input" style={inp} value={l.botellas_por_caja} onChange={e => setDetLinea(i,'botellas_por_caja',e.target.value)} />
                           </td>
-                          <td style={td({ textAlign: 'right' })}>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
+                          <td style={{ padding: '6px 6px', textAlign: 'right' }}>
+                            <input type="number" className="input" style={inp} value={l.precio_botella} onChange={e => setDetLinea(i,'precio_botella',e.target.value)} />
                           </td>
-                          <td style={td({ textAlign: 'right', fontWeight: 500 })}>{base.toFixed(2)} €</td>
-                          <td style={td({ textAlign: 'right' })}>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} placeholder={descPct > 0 ? descPct : '0'} value={dtoLinea} onChange={e => setDetLinea(i,'descuento_linea_pct', e.target.value === '' ? undefined : e.target.value)} />
+                          <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 12, fontWeight: 500 }}>{base.toFixed(2)} €</td>
+                          <td style={{ padding: '6px 6px', textAlign: 'right' }}>
+                            <input type="number" className="input" style={inp} placeholder={descPct > 0 ? descPct : '0'} value={dtoLinea} onChange={e => setDetLinea(i,'descuento_linea_pct', e.target.value === '' ? undefined : e.target.value)} />
                           </td>
-                          <td style={td({ textAlign: 'right', fontWeight: 500, color: baseD < base ? '#e53' : 'inherit' })}>{baseD.toFixed(2)} €</td>
-                          <td style={td({ textAlign: 'right' })}>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
+                          <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 12, fontWeight: 500, color: baseD < base ? '#e53' : 'inherit' }}>{baseD.toFixed(2)} €</td>
+                          <td style={{ padding: '6px 6px', textAlign: 'right' }}>
+                            <input type="number" className="input" style={inp} value={l.comision_pct} onChange={e => setDetLinea(i,'comision_pct',e.target.value)} />
                           </td>
-                          <td style={td({ textAlign: 'right', color: 'var(--accent)', fontWeight: 500 })}>{com.toFixed(2)} €</td>
-                          <td style={td()}>
+                          <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{com.toFixed(2)} €</td>
+                          <td style={{ padding: '6px 4px', textAlign: 'center' }}>
                             <button className="btn btn-danger btn-sm" onClick={() => quitarDetLinea(i)}>✕</button>
                           </td>
                         </tr>
