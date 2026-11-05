@@ -16,7 +16,7 @@ const TIPO_COLORS = { bodega: 'badge-purple', cliente: 'badge-green', comercial:
 
 const EMPTY = {
   tipo: 'cliente', codigo: '', nombre_comercial: '', nombre_fiscal: '', nif: '',
-  persona_contacto: '', telefono: '', movil: '', email: '',
+  persona_contacto: '', telefono: '', movil: '', email: '', emails_pedidos: '',
   direccion_fiscal: '', poblacion_fiscal: '', provincia_fiscal: '', cp_fiscal: '',
   direccion_almacen: '', poblacion_almacen: '', provincia_almacen: '', cp_almacen: '',
   forma_pago: '', cuenta_bancaria: '', comision_defecto: '', observaciones: '', activa: true
@@ -137,6 +137,11 @@ export default function Entidades() {
             <Campo label="Teléfono"           k="telefono"  form={form} setF={setF}/>
             <Campo label="Móvil"              k="movil"  form={form} setF={setF}/>
             <Campo label="Email"              k="email" type="email" span={2}  form={form} setF={setF}/>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label>Emails para pedidos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(varios correos separados por ;)</span></label>
+              <input className="input" type="text" placeholder="correo1@ejemplo.com; correo2@ejemplo.com"
+                value={form.emails_pedidos || ''} onChange={e => setF('emails_pedidos', e.target.value)} />
+            </div>
             <Campo label="Dirección fiscal"   k="direccion_fiscal" span={2}  form={form} setF={setF}/>
             <Campo label="Población fiscal"   k="poblacion_fiscal"  form={form} setF={setF}/>
             <Campo label="CP fiscal"          k="cp_fiscal"  form={form} setF={setF}/>
