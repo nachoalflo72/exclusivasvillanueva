@@ -94,7 +94,7 @@ function generarPDFPedido(p, lineas, cfg) {
       { label: 'Botellas',     x: LEFT + 216, w: 42,  align: 'right' },
       { label: 'Precio/bot.',  x: LEFT + 261, w: 50,  align: 'right' },
       { label: '% Dto.',       x: LEFT + 314, w: 38,  align: 'right' },
-      { label: 'Precio neto',  x: LEFT + 355, w: 55,  align: 'right' },
+      { label: 'Precio neto/bot.', x: LEFT + 355, w: 55,  align: 'right' },
       { label: 'Importe',      x: LEFT + 413, w: 82,  align: 'right' },
     ];
 
@@ -238,7 +238,8 @@ router.post('/pedido/:id', async (req, res) => {
               e.email AS entidad_email, e.nombre_comercial AS entidad_nombre,
               e.nif AS entidad_nif, e.direccion_fiscal, e.poblacion_fiscal,
               e.cp_fiscal, e.provincia_fiscal,
-              eb.email AS bodega_email, eb.nombre_comercial AS bodega_nombre,
+              eb.email AS bodega_email, eb.emails_pedidos AS bodega_emails_pedidos,
+              eb.nombre_comercial AS bodega_nombre,
               eb.direccion_fiscal AS bodega_direccion, eb.poblacion_fiscal AS bodega_poblacion,
               eb.cp_fiscal AS bodega_cp, eb.provincia_fiscal AS bodega_provincia,
               s.prefijo AS serie_prefijo
@@ -259,8 +260,11 @@ router.post('/pedido/:id', async (req, res) => {
 
     const { rows: [cfg] } = await db.query(`SELECT * FROM configuracion WHERE id=1`);
 
-    const destinatario = req.body.email || p.bodega_email;
-    if (!destinatario) return res.status(400).json({ error: 'Sin email destinatario' });
+    const rawEmails = p.bodega_emails_pedidos || p.bodega_email || req.body.email;
+    const destinatario = rawEmails
+      ? rawEmails.split(';').map(e => e.trim()).filter(Boolean)
+      : null;
+    if (!destinatario || !destinatario.length) return res.status(400).json({ error: 'Sin email destinatario' });
     const observaciones = req.body.observaciones || '';
 
     // Calcular totales para el email
@@ -324,7 +328,7 @@ router.post('/pedido/:id', async (req, res) => {
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Botellas</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio/bot.</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">% Dto.</th>
-        <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio neto</th>
+        <th style="padding:7px 8px;text-align:right;font-weight:bold">Precio neto/bot.</th>
         <th style="padding:7px 8px;text-align:right;font-weight:bold">Importe</th>
       </tr>
     </thead>
