@@ -4,6 +4,9 @@ const db      = require('../db');
 
 const TIPOS = ['bodega', 'cliente', 'comercial', 'distribuidor'];
 
+// Migración segura: columna emails para pedidos
+db.query(`ALTER TABLE entidades ADD COLUMN IF NOT EXISTS emails_pedidos TEXT`).catch(() => {});
+
 router.get('/', async (req, res) => {
   try {
     const { tipo, activa, q } = req.query;
@@ -32,7 +35,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const {
     tipo, codigo, nombre_comercial, nombre_fiscal, nif,
-    persona_contacto, telefono, movil, email,
+    persona_contacto, telefono, movil, email, emails_pedidos,
     direccion_fiscal, poblacion_fiscal, provincia_fiscal, cp_fiscal,
     direccion_almacen, poblacion_almacen, provincia_almacen, cp_almacen,
     forma_pago, cuenta_bancaria, comision_defecto, observaciones
@@ -40,12 +43,12 @@ router.post('/', async (req, res) => {
   if (!TIPOS.includes(tipo)) return res.status(400).json({ error: `Tipo inválido: ${TIPOS.join(', ')}` });
   try {
     const { rows } = await db.query(
-      `INSERT INTO entidades (tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,
+      `INSERT INTO entidades (tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,emails_pedidos,
         direccion_fiscal,poblacion_fiscal,provincia_fiscal,cp_fiscal,
         direccion_almacen,poblacion_almacen,provincia_almacen,cp_almacen,
         forma_pago,cuenta_bancaria,comision_defecto,observaciones)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
-      [tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
+      [tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,emails_pedidos||null,
        direccion_fiscal,poblacion_fiscal,provincia_fiscal,cp_fiscal,
        direccion_almacen,poblacion_almacen,provincia_almacen,cp_almacen,
        forma_pago,cuenta_bancaria,comision_defecto||0,observaciones]
@@ -56,7 +59,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const {
-    tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,
+    tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,emails_pedidos,
     direccion_fiscal,poblacion_fiscal,provincia_fiscal,cp_fiscal,
     direccion_almacen,poblacion_almacen,provincia_almacen,cp_almacen,
     forma_pago,cuenta_bancaria,comision_defecto,activa,observaciones
@@ -64,12 +67,12 @@ router.put('/:id', async (req, res) => {
   try {
     const { rows } = await db.query(
       `UPDATE entidades SET tipo=$1,codigo=$2,nombre_comercial=$3,nombre_fiscal=$4,nif=$5,
-        persona_contacto=$6,telefono=$7,movil=$8,email=$9,
-        direccion_fiscal=$10,poblacion_fiscal=$11,provincia_fiscal=$12,cp_fiscal=$13,
-        direccion_almacen=$14,poblacion_almacen=$15,provincia_almacen=$16,cp_almacen=$17,
-        forma_pago=$18,cuenta_bancaria=$19,comision_defecto=$20,activa=$21,observaciones=$22
-       WHERE id=$23 RETURNING *`,
-      [tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,
+        persona_contacto=$6,telefono=$7,movil=$8,email=$9,emails_pedidos=$10,
+        direccion_fiscal=$11,poblacion_fiscal=$12,provincia_fiscal=$13,cp_fiscal=$14,
+        direccion_almacen=$15,poblacion_almacen=$16,provincia_almacen=$17,cp_almacen=$18,
+        forma_pago=$19,cuenta_bancaria=$20,comision_defecto=$21,activa=$22,observaciones=$23
+       WHERE id=$24 RETURNING *`,
+      [tipo,codigo,nombre_comercial,nombre_fiscal,nif,persona_contacto,telefono,movil,email,emails_pedidos||null,
        direccion_fiscal,poblacion_fiscal,provincia_fiscal,cp_fiscal,
        direccion_almacen,poblacion_almacen,provincia_almacen,cp_almacen,
        forma_pago,cuenta_bancaria,comision_defecto||0,activa,observaciones,req.params.id]
