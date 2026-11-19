@@ -281,6 +281,7 @@ export default function Entidades() {
             <Campo label="CP almacén"         k="cp_almacen"  form={form} setF={setF}/>
             <Campo label="Forma de pago"      k="forma_pago"  form={form} setF={setF}/>
             <Campo label="% Comisión defecto" k="comision_defecto" type="number"  form={form} setF={setF}/>
+            <Campo label="Nº cuenta bancaria" k="cuenta_bancaria" span={2}  form={form} setF={setF}/>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Observaciones</label>
               <textarea className="input" rows={3} value={form.observaciones || ''}
