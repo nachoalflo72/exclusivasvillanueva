@@ -52,7 +52,7 @@ export default function Pedidos() {
   const [fHasta,  setFHasta]  = useState('');
 
   // Vista previa email
-  const [emailModal,    setEmailModal]    = useState(null); // { pedidoId, bodegaEmail, lineas, descPct, ivaPct, pedido }
+  const [emailModal,    setEmailModal]    = useState(null);
   const [emailObs,      setEmailObs]      = useState('');
   const [emailSending,  setEmailSending]  = useState(false);
 
@@ -115,16 +115,27 @@ export default function Pedidos() {
   const setLinea = (i, k, v) => setLineas(l => l.map((x, idx) => idx === i ? { ...x, [k]: v } : x));
   const quitarLinea = (i) => setLineas(l => l.filter((_, idx) => idx !== i));
 
-  const onRefChange = (i, ref_id) => {
-    const ref = referencias.find(r => r.id == ref_id);
-    if (ref) {
-      setLineas(l => l.map((x, idx) => idx === i ? {
-        ...x, referencia_id: ref_id,
-        botellas_por_caja: ref.botellas_por_caja,
-        precio_botella: ref.precio_venta,
-        comision_pct: ref.comision
-      } : x));
+  // ── Busca tarifa específica por entidad; si no existe usa precio_venta por defecto ──
+  const getPrecioVenta = async (ref, entidad_id) => {
+    if (!entidad_id) return ref.precio_venta;
+    try {
+      const { data } = await api.get(`/referencias/tarifa/precio?referencia_id=${ref.id}&entidad_id=${entidad_id}`);
+      return data.precio_venta;
+    } catch {
+      return ref.precio_venta;
     }
+  };
+
+  const onRefChange = async (i, ref_id) => {
+    const ref = referencias.find(r => r.id == ref_id);
+    if (!ref) return;
+    const precio = await getPrecioVenta(ref, form.entidad_id);
+    setLineas(l => l.map((x, idx) => idx === i ? {
+      ...x, referencia_id: ref_id,
+      botellas_por_caja: ref.botellas_por_caja,
+      precio_botella: precio,
+      comision_pct: ref.comision
+    } : x));
   };
 
   const guardar = async () => {
@@ -165,12 +176,10 @@ export default function Pedidos() {
         email: emailModal.pedido.bodega_email,
         observaciones: emailObs,
       });
-      // Cambiar estado a enviado
       await api.put(`/pedidos/${emailModal.pedido.id}/estado`, { estado: 'enviado' });
       toast('Email enviado y pedido marcado como Enviado', 'success');
       setEmailModal(null);
       cargar();
-      // Actualizar pedidoSel si está abierto
       if (pedidoSel?.id === emailModal.pedido.id) {
         const { data } = await api.get(`/pedidos/${emailModal.pedido.id}`);
         setPedidoSel(data);
@@ -180,12 +189,10 @@ export default function Pedidos() {
   };
 
   const imprimirPedido = async (pedido, lineas, descPct, ivaPct) => {
-    // Cargar configuración del comercial
     let cfg = {};
     try { const { data } = await api.get('/configuracion'); cfg = data || {}; } catch {}
 
     const fmt = (n) => parseFloat(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    // Descuentos acumulados: dto de línea (0 si no tiene) + dto del pedido
     const baseDesc  = lineas.reduce((s, l) => s + baseDescLinea(l, descPct), 0);
     const ivaEuros  = baseDesc * ivaPct / 100;
     const total     = baseDesc + ivaEuros;
@@ -430,7 +437,6 @@ ${pedido.observaciones ? `
         <Modal title="Nuevo pedido" onClose={() => setModal(false)}
           style={{ maxWidth: 1100, width: '95vw' }}>
 
-          {/* Cabecera del pedido */}
           <div className="form-grid form-grid-2" style={{ gap: 12, marginBottom: 20 }}>
             <div className="form-group">
               <label>Fecha</label>
@@ -538,9 +544,7 @@ ${pedido.observaciones ? `
             </div>
           </div>
 
-          {/* Fila inferior: campos + totales en horizontal */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, flexWrap: 'wrap' }}>
-            {/* Campos pequeños */}
             <div className="form-group" style={{ minWidth: 80 }}>
               <label>IVA %</label>
               <input type="number" className="input" value={form.porcentaje_iva}
@@ -557,7 +561,6 @@ ${pedido.observaciones ? `
                 onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} />
             </div>
 
-            {/* Totales inline */}
             <div style={{ display: 'flex', gap: 0, background: 'var(--surface-raised)', borderRadius: 8, overflow: 'hidden', fontSize: 13, border: '1px solid var(--border)', flexShrink: 0 }}>
               {[
                 { label: 'Base', value: totales.baseTotal.toFixed(2) + ' €' },
@@ -575,7 +578,6 @@ ${pedido.observaciones ? `
             </div>
           </div>
 
-          {/* Botones al final, dentro del scroll */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button className="btn btn-primary" onClick={guardar} disabled={saving}>
@@ -585,14 +587,12 @@ ${pedido.observaciones ? `
         </Modal>
       )}
 
-      {/* ── Modal Detalle ──────────────────────────────────── */}
       {/* ── Modal Vista Previa Email ──────────────────────────── */}
       {emailModal && (() => {
         const { pedido, lineas: eLineas, descPct: eDsc, ivaPct: eIva } = emailModal;
         const fmt = (n) => parseFloat(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fechaStr = pedido.fecha ? new Date(pedido.fecha).toLocaleDateString('es-ES') : '';
         const numeroPedido = `${pedido.serie_prefijo || ''}${pedido.numero}`;
-        const baseTotal = eLineas.reduce((s, l) => s + baseLinea(l), 0);
         const baseDescT = eLineas.reduce((s, l) => s + baseDescLinea(l, eDsc), 0);
         const ivaEuros  = baseDescT * eIva / 100;
         const totalFinal = baseDescT + ivaEuros;
@@ -601,7 +601,6 @@ ${pedido.observaciones ? `
           <Modal title="Vista previa del email" onClose={() => setEmailModal(null)}
             style={{ maxWidth: 720, width: '95vw' }} zIndex={1100}>
 
-            {/* Preview del email */}
             <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20, marginBottom: 16, background: '#fff', color: '#222', fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
               <p style={{ marginBottom: 12 }}>
                 Adjunto remitimos N/pedido nº <strong>{numeroPedido}</strong> de fecha <strong>{fechaStr}</strong> correspondiente al cliente <strong>{pedido.entidad_nombre}</strong>, con el siguiente detalle:
@@ -647,7 +646,6 @@ ${pedido.observaciones ? `
                 </tbody>
               </table>
 
-              {/* Observaciones preview */}
               {emailObs && (
                 <p style={{ marginBottom: 12, whiteSpace: 'pre-wrap', borderLeft: '3px solid #ddd', paddingLeft: 10, color: '#444' }}>{emailObs}</p>
               )}
@@ -655,7 +653,6 @@ ${pedido.observaciones ? `
               <p style={{ marginBottom: 8 }}>Un cordial saludo.</p>
             </div>
 
-            {/* Campo observaciones */}
             <div className="form-group" style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Observaciones (se añaden antes del saludo)</label>
               <textarea className="input" rows={4} style={{ width: '100%', resize: 'vertical' }}
@@ -673,6 +670,7 @@ ${pedido.observaciones ? `
         );
       })()}
 
+      {/* ── Modal Detalle ──────────────────────────────────── */}
       {modal === 'detalle' && pedidoSel && (() => {
         const descPct  = parseFloat(detForm.descuento_pct) || 0;
         const ivaPct   = parseFloat(detForm.porcentaje_iva) || 21;
@@ -690,16 +688,20 @@ ${pedido.observaciones ? `
           referencia_id: '', cantidad_cajas: 1, cajas_promo: 0,
           botellas_por_caja: 6, precio_botella: 0, comision_pct: 0
         }]);
-        const onDetRefChange = (i, ref_id) => {
+
+        const onDetRefChange = async (i, ref_id) => {
           const ref = referencias.find(r => r.id == ref_id);
-          if (ref) setDetLineas(l => l.map((x, idx) => idx === i ? {
+          if (!ref) return;
+          const precio = await getPrecioVenta(ref, pedidoSel.entidad_id);
+          setDetLineas(l => l.map((x, idx) => idx === i ? {
             ...x, referencia_id: ref_id,
             ref_codigo: ref.codigo, ref_nombre: ref.nombre,
             botellas_por_caja: ref.botellas_por_caja,
-            precio_botella: ref.precio_venta,
+            precio_botella: precio,
             comision_pct: ref.comision
           } : x));
         };
+
         const guardarDetalle = async () => {
           setSaving(true);
           try {
@@ -733,7 +735,6 @@ ${pedido.observaciones ? `
               <p><b>Fecha:</b> <FechaCorta fecha={pedidoSel.fecha} /> &nbsp; <EstadoBadge estado={pedidoSel.estado} /></p>
             </div>
 
-            {/* Líneas editables */}
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <b style={{ fontSize: 14 }}>Líneas de pedido</b>
@@ -819,7 +820,6 @@ ${pedido.observaciones ? `
               </div>
             </div>
 
-            {/* Fila inferior: IVA, descuento y totales */}
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 12, flexWrap: 'wrap' }}>
               <div className="form-group" style={{ minWidth: 80 }}>
                 <label>IVA %</label>
@@ -848,7 +848,6 @@ ${pedido.observaciones ? `
               </div>
             </div>
 
-            {/* Botones */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 20 }}>
               <select className="input" style={{ width: 140 }} defaultValue={pedidoSel.estado}
                 onChange={e => cambiarEstado(pedidoSel.id, e.target.value)}>
