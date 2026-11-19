@@ -22,6 +22,131 @@ const EMPTY = {
   forma_pago: '', cuenta_bancaria: '', comision_defecto: '', observaciones: '', activa: true
 };
 
+// ── Genera el PDF de la ficha de entidad usando jsPDF ──────────────────────
+async function imprimirFicha(entidad) {
+  // Importación dinámica para no cargar jsPDF en el bundle inicial
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const margenIzq = 20;
+  const margenDer = 190;
+  const anchoUtil = margenDer - margenIzq;
+  let y = 20;
+
+  // ── Cabecera ──────────────────────────────────────────────────────────────
+  doc.setFillColor(30, 27, 75); // azul oscuro del Sidebar
+  doc.rect(0, 0, 210, 32, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(165, 180, 252); // indigo claro
+  doc.text('EXCLUSIVAS VILLANUEVA', margenIzq, 13);
+
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Ficha de entidad', margenIzq, 21);
+
+  // Tipo badge (derecha)
+  const tipoLabel = TIPO_LABELS[entidad.tipo] || entidad.tipo || '';
+  doc.setFontSize(9);
+  doc.setTextColor(165, 180, 252);
+  doc.text(tipoLabel.toUpperCase(), margenDer, 21, { align: 'right' });
+
+  y = 44;
+
+  // ── Nombre comercial ──────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(30, 27, 75);
+  doc.text(entidad.nombre_comercial || '—', margenIzq, y);
+  y += 3;
+
+  doc.setDrawColor(196, 181, 253);
+  doc.setLineWidth(0.4);
+  doc.line(margenIzq, y, margenDer, y);
+  y += 10;
+
+  // ── Función auxiliar para pintar una fila etiqueta + valor ────────────────
+  const fila = (etiqueta, valor) => {
+    if (!valor) return; // omite campos vacíos
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 100, 120);
+    doc.text(etiqueta.toUpperCase(), margenIzq, y);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(20, 20, 40);
+    // wrap largo si hace falta
+    const lineas = doc.splitTextToSize(String(valor), anchoUtil - 42);
+    doc.text(lineas, margenIzq + 42, y);
+    y += lineas.length > 1 ? lineas.length * 5.5 + 2 : 8;
+  };
+
+  const separador = (titulo) => {
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(139, 92, 246);
+    doc.text(titulo.toUpperCase(), margenIzq, y);
+    doc.setDrawColor(221, 214, 254);
+    doc.setLineWidth(0.3);
+    doc.line(margenIzq + doc.getTextWidth(titulo.toUpperCase()) + 2, y - 1, margenDer, y - 1);
+    y += 7;
+  };
+
+  // ── Datos generales ───────────────────────────────────────────────────────
+  separador('Datos generales');
+  fila('Nombre comercial', entidad.nombre_comercial);
+  fila('CIF / NIF',        entidad.nif);
+
+  // ── Dirección fiscal ──────────────────────────────────────────────────────
+  separador('Dirección fiscal');
+  const dirFiscal = [
+    entidad.direccion_fiscal,
+    [entidad.cp_fiscal, entidad.poblacion_fiscal].filter(Boolean).join(' '),
+    entidad.provincia_fiscal,
+  ].filter(Boolean).join(', ');
+  fila('Dirección', dirFiscal);
+
+  // ── Dirección almacén ─────────────────────────────────────────────────────
+  const dirAlmacen = [
+    entidad.direccion_almacen,
+    [entidad.cp_almacen, entidad.poblacion_almacen].filter(Boolean).join(' '),
+    entidad.provincia_almacen,
+  ].filter(Boolean).join(', ');
+  if (dirAlmacen) {
+    separador('Dirección almacén');
+    fila('Dirección', dirAlmacen);
+  }
+
+  // ── Contacto ──────────────────────────────────────────────────────────────
+  separador('Contacto');
+  if (entidad.telefono) fila('Teléfono', entidad.telefono);
+  if (entidad.movil)    fila('Móvil',    entidad.movil);
+  fila('Correo electrónico', entidad.email);
+
+  // ── Condiciones comerciales ───────────────────────────────────────────────
+  separador('Condiciones comerciales');
+  fila('Forma de pago', entidad.forma_pago);
+  fila('Nº cuenta',     entidad.cuenta_bancaria);
+
+  // ── Pie ───────────────────────────────────────────────────────────────────
+  const totalPags = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPags; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(160, 160, 180);
+    const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    doc.text(`Generado el ${fecha}`, margenIzq, 290);
+    doc.text(`${i} / ${totalPags}`, margenDer, 290, { align: 'right' });
+  }
+
+  const nombreArchivo = `ficha_${(entidad.nombre_comercial || 'entidad').replace(/\s+/g, '_').toLowerCase()}.pdf`;
+  doc.save(nombreArchivo);
+}
+
 export default function Entidades() {
   const toast = useToast();
   const [lista, setLista]     = useState([]);
@@ -118,6 +243,12 @@ export default function Entidades() {
         <Modal title={form.id ? 'Editar entidad' : 'Nueva entidad'} onClose={cerrar}
           footer={<>
             <button className="btn btn-secondary" onClick={cerrar}>Cancelar</button>
+            {form.id && (
+              <button className="btn btn-secondary" onClick={() => imprimirFicha(form)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                🖨️ Imprimir ficha
+              </button>
+            )}
             <button className="btn btn-primary" onClick={guardar} disabled={saving}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
