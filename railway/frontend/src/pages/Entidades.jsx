@@ -151,7 +151,7 @@ export default function Entidades() {
   };
 
   const eliminar = async (e) => {
-    if (!confirm(`¿Eliminar definitivamente "${e.nombre_comercial}"? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar definitivamente "${e.nombre_fiscal || e.nombre_comercial}"? Esta acción no se puede deshacer.`)) return;
     try {
       await api.delete(`/entidades/${e.id}/eliminar`);
       toast('Entidad eliminada', 'success');
@@ -189,7 +189,7 @@ export default function Entidades() {
               {lista.map((e, i) => (
                 <tr key={e.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--surface-raised)' }}>
                   <td style={{ padding: '10px 14px', fontFamily: 'monospace' }}>{e.codigo}</td>
-                  <td style={{ padding: '10px 14px', fontWeight: 500 }}>{e.nombre_comercial}</td>
+                  <td style={{ padding: '10px 14px', fontWeight: 500 }}>{e.nombre_fiscal || e.nombre_comercial}</td>
                   <td style={{ padding: '10px 14px' }}><span className={`badge ${TIPO_COLORS[e.tipo]}`}>{TIPO_LABELS[e.tipo]}</span></td>
                   <td style={{ padding: '10px 14px' }}>{e.telefono || e.movil || '—'}</td>
                   <td style={{ padding: '10px 14px' }}>{e.email || '—'}</td>
