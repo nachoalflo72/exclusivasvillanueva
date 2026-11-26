@@ -82,6 +82,13 @@ router.put('/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.delete('/:id/eliminar', async (req, res) => {
+  try {
+    await db.query('DELETE FROM entidades WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await db.query(`UPDATE entidades SET activa=false WHERE id=$1`, [req.params.id]);
